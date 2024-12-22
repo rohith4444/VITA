@@ -1,10 +1,10 @@
 from agents.base_agent import BaseAgent
 from langchain.llms import OpenAI
 
-class MechatronicAgent(BaseAgent):
+class PythonAgent(BaseAgent):
     def __init__(self):
         super().__init__(
-            name="Mechatronic Engineer",
-            vector_db_path="path_to_mechatronic_db",
+            name="Python Coder",
+            vector_db_path="path_to_python_db",
             llm=OpenAI(model_name="gpt-4")
         )

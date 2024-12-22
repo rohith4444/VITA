@@ -1,0 +1,5 @@
+# Virtual Environment
+vitaenv/
+
+# Environment Variables
+.env
