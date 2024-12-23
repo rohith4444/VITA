@@ -1,24 +1,52 @@
 import os
 
-def display_project_structure(base_path, indent=""):
-    # Define hidden files/directories to exclude
-    exclude_items = {".git", "vitaenv"}
-    # List items excluding the specified ones
-    items = [item for item in os.listdir(base_path) if item not in exclude_items]
-    for index, item in enumerate(sorted(items)):
-        item_path = os.path.join(base_path, item)
-        # Add tree-like symbols for visual hierarchy
-        is_last = index == len(items) - 1
-        branch = "└── " if is_last else "├── "
-        # Print the current item
-        print(f"{indent}{branch}{item}")
-        # If it's a directory, recursively display its contents
-        if os.path.isdir(item_path):
-            new_indent = indent + ("    " if is_last else "│   ")
-            display_project_structure(item_path, new_indent)
+def display_structure(startpath, exclude_dirs=None, exclude_files=None):
+    """
+    Display the project structure in a tree-like format.
+    Uses ASCII characters for Windows compatibility.
+    """
+    if exclude_dirs is None:
+        exclude_dirs = ['__pycache__', '.git', '.venv', 'venv']
+    if exclude_files is None:
+        exclude_files = ['.pyc', '.pyo', '.pyd', '.DS_Store']
+        
+    def should_exclude(name, is_dir=True):
+        if is_dir:
+            return any(excluded in name for excluded in exclude_dirs)
+        return any(name.endswith(excluded) for excluded in exclude_files)
+
+    print("\nProject Structure:")
+    print("================")
+    
+    for root, dirs, files in os.walk(startpath):
+        # Calculate the current level
+        level = root.replace(startpath, '').count(os.sep)
+        indent = '|   ' * (level - 1) + '+-- ' if level > 0 else ''
+        
+        # Print the current directory
+        rel_path = os.path.relpath(root, startpath)
+        if rel_path != '.':
+            print(f'{indent}{os.path.basename(root)}/')
+        
+        # Filter and sort directories
+        dirs[:] = sorted([d for d in dirs if not should_exclude(d, True)])
+        
+        # Filter and sort files
+        files = sorted([f for f in files if not should_exclude(f, False)])
+        
+        # Print files
+        for i, file in enumerate(files):
+            if level == 0:
+                print(f'+-- {file}')
+            else:
+                is_last = (i == len(files) - 1) and not dirs
+                file_indent = '|   ' * (level - 1) + ('`-- ' if is_last else '+-- ')
+                print(f'{file_indent}{file}')
+
+def main():
+    # Get the current directory
+    current_dir = os.getcwd()
+    display_structure(current_dir)
 
 if __name__ == "__main__":
-    # Use the current working directory as the base path
-    base_directory = os.getcwd()
-    print(f"Project structure for: {base_directory} (excluding .git and venv)")
-    display_project_structure(base_directory)
+    main()
