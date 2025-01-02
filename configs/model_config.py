@@ -37,7 +37,7 @@ class LLMConfig:
 # Default configurations
 logger.info("Creating default LLM configurations")
 DEFAULT_LLM_CONFIG = LLMConfig(
-    model_name="gpt-4",
+    model_name="gpt-3.5",
     temperature=0.0
 )
 logger.debug("DEFAULT_LLM_CONFIG created")

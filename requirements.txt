@@ -1,25 +1,25 @@
-# requirements.txt
-langchain==0.2.0
-langchain-openai==0.1.7
-langchain-community==0.2.0
-langgraph==0.1.1
-langchain-text-splitters==0.2.0
-langchain-huggingface==0.0.1
-langchain-chroma==0.0.5
+# langchain
+langchain
+langchain-openai
+langchain-community
+langgraph
+langchain-text-splitters
+langchain-huggingface
+langchain-chroma
 
 # Document processing
-unstructured[all-docs]==0.14.0
-jq==1.7.0
-pypdf==4.2.0
-pymupdf==1.24.4
+unstructured[all-docs]
+jq
+pypdf
+pymupdf
 
 # ML and NLP
-spacy==3.7.2
-sentence-transformers==2.7.0
-tiktoken==0.7.0
+spacy
+sentence-transformers
+tiktoken
 
 # Other dependencies
-python-dotenv==1.0.0
-pydantic==2.5.2
-tqdm==4.66.1
-tavily-python==0.2.9
+python-dotenv
+pydantic
+tqdm
+tavily-python
