@@ -1,7 +1,7 @@
 import logging
+import logging.handlers
 import sys
 from pathlib import Path
-from datetime import datetime
 from typing import Optional
 
 class CustomFormatter(logging.Formatter):
@@ -30,50 +30,25 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
-def setup_logger(
-    name: str,
-    level: int = logging.INFO,
-    log_file: Optional[str] = None,
-    log_dir: str = "logs"
-) -> logging.Logger:
-    """
-    Set up logger with both file and console handlers
-    
-    Args:
-        name: Name of the logger
-        level: Logging level
-        log_file: Optional specific log file name
-        log_dir: Directory for log files
-    
-    Returns:
-        Configured logger instance
-    """
+def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+    """Set up logger with both socket and console handlers"""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
     # Remove existing handlers
     logger.handlers = []
 
-    # Create formatters
-    console_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    file_fmt = "%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s"
+    # Socket handler for remote logging
+    socket_handler = logging.handlers.SocketHandler('localhost', 9020)
+    logger.addHandler(socket_handler)
 
-    # Console handler with colors
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(CustomFormatter(console_fmt))
-    logger.addHandler(console_handler)
-
-    # File handler
-    if log_file is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file = f"{name}_{timestamp}.log"
-
-    log_path = Path(log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
-    
-    file_handler = logging.FileHandler(log_path / log_file)
-    file_handler.setFormatter(logging.Formatter(file_fmt))
-    logger.addHandler(file_handler)
+    # Only add console handler for user-facing messages in main
+    if name == "main":
+        console_fmt = "%(message)s"  # Simplified format for user messages
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(logging.Formatter(console_fmt))
+        console_handler.addFilter(lambda record: not record.msg.startswith(("DEBUG:", "INFO:")))
+        logger.addHandler(console_handler)
 
     return logger
 

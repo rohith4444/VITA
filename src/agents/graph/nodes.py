@@ -17,7 +17,7 @@ class AgentNodes:
             self.agent = agent
             # Initialize tools with logging
             self.logger.debug("Initializing WebSearchTool")
-            self.web_search = WebSearchTool()
+            self.web_search_tool = WebSearchTool()
             
             self.logger.debug("Initializing QueryRephraser")
             self.rephraser = QueryRephraser()
@@ -91,7 +91,7 @@ class AgentNodes:
         """Perform web search with rewritten query."""
         self.logger.info(f"Starting web search with query: {state['question']}")
         try:
-            web_docs = self.web_search.search(state["question"])
+            web_docs = self.web_search_tool.search(state["question"])
             self.logger.debug(f"Found {len(web_docs)} documents from web search")
             
             all_docs = state["documents"] + web_docs

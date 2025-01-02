@@ -1,5 +1,5 @@
 from src.chains.grading.grad_models import GradeDocuments
-from src.chains.grading.prompts import GRADING_PROMPT
+from src.prompts.grading_prompts import GRADING_PROMPT
 from src.utils.llm import get_llm
 from typing import List
 from langchain.docstore.document import Document

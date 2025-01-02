@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import List
 from langgraph.graph import END, StateGraph
+from configs.agent_config import AgentConfig  
 from src.agents.graph.state import AgentGraphState
 from src.agents.graph.nodes import AgentNodes
 from src.utils.logger import setup_logger

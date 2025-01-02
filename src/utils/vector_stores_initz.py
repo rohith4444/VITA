@@ -1,6 +1,7 @@
 import os
 from src.utils.data_manager import AgentDataManager
 from src.utils.logger import setup_logger
+from src.utils.env_loader import load_env_variables 
 
 logger = setup_logger("VectorStoresInit")
 
@@ -9,6 +10,9 @@ def initialize_agent_vector_stores(base_dir: str = "VITA"):
     logger.info(f"Starting vector store initialization in directory: {base_dir}")
     
     try:
+        logger.info("Loading environment variables")
+        env_vars = load_env_variables()  # Add this
+
         # List of agents
         agents = ["mechatronic_agent", "python_agent"]
         logger.debug(f"Initializing vector stores for agents: {agents}")
@@ -19,7 +23,7 @@ def initialize_agent_vector_stores(base_dir: str = "VITA"):
             try:
                 # Initialize data manager
                 logger.debug(f"Creating data manager for {agent_name}")
-                data_manager = AgentDataManager(agent_name, base_dir)
+                data_manager = AgentDataManager(agent_name)
                 
                 # Create or update vector store
                 logger.debug(f"Creating/updating vector store for {agent_name}")

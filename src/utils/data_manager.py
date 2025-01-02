@@ -18,8 +18,8 @@ class AgentDataManager:
             self.agent_name = agent_name
             
             # Set up paths
-            self.data_dir = os.path.join(base_dir, "data", f"{agent_name}/docs")
-            self.vector_store_dir = os.path.join(base_dir, "vector_stores", agent_name)
+            self.data_dir = os.path.join("data", f"{agent_name}/docs")
+            self.vector_store_dir = os.path.join("vector_stores", agent_name)
             self.logger.debug(f"Data directory: {self.data_dir}")
             self.logger.debug(f"Vector store directory: {self.vector_store_dir}")
             
@@ -87,12 +87,15 @@ class AgentDataManager:
         self.logger.info(f"Creating/loading vector store (force_reload={force_reload})")
         
         try:
+            # Sanitize collection name
+            collection_name = f"{self.agent_name.replace(' ', '_').lower()}_collection"
+            
             # Check if vector store already exists
             if os.path.exists(self.vector_store_dir) and not force_reload:
                 self.logger.info(f"Loading existing vector store for {self.agent_name}")
                 self.vector_store = Chroma(
                     persist_directory=self.vector_store_dir,
-                    collection_name=f"{self.agent_name}_collection",
+                    collection_name=collection_name,
                     embedding_function=self.embedding_model
                 )
             else:

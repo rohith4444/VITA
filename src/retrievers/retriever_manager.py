@@ -18,10 +18,13 @@ class RetrieverManager:
         if agent_name not in cls._instances:
             cls._logger.info(f"Creating new retriever for {agent_name}")
             try:
+                # Convert agent_name to a valid collection name
+                collection_name = f"{agent_name.replace(' ', '_').lower()}_collection"
+
                 # Connect to vector store
                 vector_store = Chroma(
                     persist_directory=os.path.join("VITA", "vector_stores", agent_name),
-                    collection_name=f"{agent_name}_collection",
+                    collection_name=collection_name,  # Using sanitized collection name
                     embedding_function=OpenAIEmbeddings(model='text-embedding-3-small')
                 )
                 
