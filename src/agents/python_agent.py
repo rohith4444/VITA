@@ -3,11 +3,11 @@ from configs.agent_config import PYTHON_AGENT_CONFIG
 from src.utils.logger import setup_logger
 
 class PythonAgent(BaseAgent):
-    def __init__(self):
+    def __init__(self, session=None):
         self.logger = setup_logger("PythonAgent")
         self.logger.info("Initializing Python Agent")
         try:
-            super().__init__(PYTHON_AGENT_CONFIG)
+            super().__init__(PYTHON_AGENT_CONFIG, session=session)
             self.logger.info("Python Agent initialized successfully")
         except Exception as e:
             self.logger.error(f"Failed to initialize Python Agent: {str(e)}", exc_info=True)

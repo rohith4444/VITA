@@ -1,4 +1,4 @@
-from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from src.utils.logger import setup_logger
 
 logger = setup_logger("GradeModels")
@@ -9,7 +9,7 @@ class GradeDocuments(BaseModel):
         description="Documents are relevant to the question, 'yes' or 'no'"
     )
     
-    @validator('binary_score')
+    @field_validator('binary_score')
     def validate_score(cls, v):
         """Validate that score is either 'yes' or 'no'."""
         v = v.lower()

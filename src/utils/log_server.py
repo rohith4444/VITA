@@ -8,119 +8,143 @@ import time
 import os
 from pathlib import Path
 import sys
-from datetime import datetime
+from queue import Queue
+import socket
 
-class ColoredFormatter(logging.Formatter):
-    """Colored log formatter"""
+class LogQueueHandler(logging.handlers.QueueHandler):
+    """Queue handler for buffering log records"""
+    def enqueue(self, record):
+        try:
+            self.queue.put_nowait(record)
+        except Exception:
+            pass
+
+class ResilientLogRecordStreamHandler(socketserver.StreamRequestHandler):
+    """Handler with connection recovery"""
     
-    def __init__(self):
-        super().__init__()
-        # Color codes for different levels
-        self.colors = {
-            'DEBUG': '\033[36m',     # Cyan
-            'INFO': '\033[32m',      # Green
-            'WARNING': '\033[33m',    # Yellow
-            'ERROR': '\033[31m',      # Red
-            'CRITICAL': '\033[37;41m', # White on Red
-            'RESET': '\033[0m'        # Reset color
-        }
-        self.fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    def setup(self):
+        super().setup()
+        self.connection_alive = True
+        self.log_queue = Queue()
+        self.setup_logger()
 
-    def format(self, record):
-        # Get color based on level
-        color = self.colors.get(record.levelname, self.colors['RESET'])
+    def setup_logger(self):
+        self.logger = logging.getLogger("LogServer")
+        self.logger.setLevel(logging.INFO)
         
-        # Format the message
-        formatted_msg = logging.Formatter(self.fmt).format(record)
-        
-        # Color the entire message and reset at the end
-        return f"{color}{formatted_msg}{self.colors['RESET']}"
-
-class LogRecordStreamHandler(socketserver.StreamRequestHandler):
-    """Handler for log records with duplicate detection"""
-    
-    def __init__(self, *args, **kwargs):
-        self.loggers = {}
-        self.message_cache = set()  # Cache for duplicate detection
-        super().__init__(*args, **kwargs)
+        # Console handler
+        console = logging.StreamHandler()
+        console.setFormatter(
+            logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        )
+        self.logger.addHandler(console)
 
     def handle(self):
-        while True:
+        while self.connection_alive:
             try:
                 chunk = self.connection.recv(4)
                 if len(chunk) < 4:
                     break
+                    
                 slen = struct.unpack('>L', chunk)[0]
                 chunk = self.connection.recv(slen)
-                while len(chunk) < slen:
+                
+                while len(chunk) < slen and self.connection_alive:
                     chunk = chunk + self.connection.recv(slen - len(chunk))
-                obj = pickle.loads(chunk)
-                record = logging.makeLogRecord(obj)
+                    
+                record = logging.makeLogRecord(pickle.loads(chunk))
                 self.handle_log_record(record)
+                
+            except (ConnectionError, socket.error) as e:
+                self.logger.warning(f"Connection issue: {e}")
+                self.attempt_reconnection()
             except Exception as e:
-                print(f"Error handling log record: {e}")
-                break
+                self.logger.error(f"Error handling log record: {e}")
+                self.connection_alive = False
 
-    def is_duplicate(self, record):
-        """Check if a log record is a duplicate"""
-        # Create a unique key for the message
-        msg_key = f"{record.name}:{record.levelname}:{record.msg}:{record.created}"
+    def attempt_reconnection(self):
+        """Attempt to restore connection"""
+        max_attempts = 3
+        attempt = 0
         
-        if msg_key in self.message_cache:
-            return True
-        
-        # Add to cache
-        self.message_cache.add(msg_key)
-        
-        # Keep cache size manageable
-        if len(self.message_cache) > 1000:
-            self.message_cache.clear()
-            
-        return False
+        while attempt < max_attempts and not self.connection_alive:
+            try:
+                self.logger.info(f"Attempting reconnection {attempt + 1}/{max_attempts}")
+                self.connection = self.request
+                self.connection_alive = True
+                self.logger.info("Connection restored")
+                break
+            except Exception as e:
+                attempt += 1
+                self.logger.error(f"Reconnection attempt {attempt} failed: {e}")
+                time.sleep(1)
 
     def handle_log_record(self, record):
-        # Skip if it's a duplicate message
-        if self.is_duplicate(record):
-            return
+        if not hasattr(self, 'log_handlers'):
+            self.log_handlers = {}
             
-        # Get or create logger
-        if record.name not in self.loggers:
-            logger = logging.getLogger(record.name)
+        logger_name = record.name
+        if logger_name not in self.log_handlers:
+            # Create logger
+            logger = logging.getLogger(logger_name)
             logger.handlers = []  # Remove existing handlers
-            logger.propagate = False  # Prevent propagation
-            
-            # Console handler with colors
-            console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(ColoredFormatter())
-            logger.addHandler(console_handler)
+            logger.propagate = False
             
             # File handler
             log_dir = Path("logs")
             log_dir.mkdir(exist_ok=True)
             file_handler = logging.FileHandler(
-                log_dir / f"{record.name.replace('.', '_')}.log"
+                log_dir / f"{logger_name.replace('.', '_')}.log"
             )
             file_handler.setFormatter(
                 logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             )
             logger.addHandler(file_handler)
             
-            self.loggers[record.name] = logger
-        
-        logger = self.loggers[record.name]
+            # Console handler with colors
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(ColoredFormatter())
+            logger.addHandler(console_handler)
+            
+            self.log_handlers[logger_name] = logger
+            
+        logger = self.log_handlers[logger_name]
         logger.handle(record)
 
-class LogServer(socketserver.ThreadingTCPServer):
+class ColoredFormatter(logging.Formatter):
+    """Colored formatter for console output"""
+    def __init__(self):
+        super().__init__()
+        self.colors = {
+            'DEBUG': '\033[36m',    # Cyan
+            'INFO': '\033[32m',     # Green
+            'WARNING': '\033[33m',  # Yellow
+            'ERROR': '\033[31m',    # Red
+            'CRITICAL': '\033[37;41m',  # White on Red
+            'RESET': '\033[0m'
+        }
+        self.fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    def format(self, record):
+        color = self.colors.get(record.levelname, self.colors['RESET'])
+        formatted_msg = logging.Formatter(self.fmt).format(record)
+        return f"{color}{formatted_msg}{self.colors['RESET']}"
+
+class ResilientLogServer(socketserver.ThreadingTCPServer):
+    """TCP Server with connection recovery"""
     allow_reuse_address = True
+    daemon_threads = True
 
 def serve_logging(host='localhost', port=9020):
-    """Start the logging server"""
-    try:
-        print('\033[0;32m' + f"Log server started on {host}:{port}" + '\033[0m')
-        server = LogServer((host, port), LogRecordStreamHandler)
-        server.serve_forever()
-    except Exception as e:
-        print('\033[0;31m' + f"Error starting log server: {e}" + '\033[0m')
+    """Start the logging server with connection recovery"""
+    while True:
+        try:
+            server = ResilientLogServer((host, port), ResilientLogRecordStreamHandler)
+            print('\033[32m' + f"Log server started on {host}:{port}" + '\033[0m')
+            server.serve_forever()
+        except Exception as e:
+            print('\033[31m' + f"Server error: {e}, restarting..." + '\033[0m')
+            time.sleep(1)
 
 if __name__ == '__main__':
     serve_logging()

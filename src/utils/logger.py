@@ -30,7 +30,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
-def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+def setup_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
     """Set up logger with both socket and console handlers"""
     logger = logging.getLogger(name)
     logger.setLevel(level)

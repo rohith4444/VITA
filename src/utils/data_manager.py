@@ -10,16 +10,21 @@ from src.utils.logger import setup_logger
 class AgentDataManager:
     """Manages data loading and vector store operations for agents."""
     
-    def __init__(self, agent_name: str, base_dir: str = "VITA"):
+    def __init__(self, agent_name: str):
         self.logger = setup_logger(f"DataManager.{agent_name}")
         self.logger.info(f"Initializing AgentDataManager for {agent_name}")
         
         try:
             self.agent_name = agent_name
             
-            # Set up paths
-            self.data_dir = os.path.join("data", f"{agent_name}/docs")
-            self.vector_store_dir = os.path.join("vector_stores", agent_name)
+            # Get project root directory
+            root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            
+            # Set up paths relative to project root
+            self.data_dir = os.path.join(root_dir, "data", f"{agent_name.lower()}/docs")
+            self.vector_store_dir = os.path.join(root_dir, "vector_stores", agent_name.lower())
+            
+
             self.logger.debug(f"Data directory: {self.data_dir}")
             self.logger.debug(f"Vector store directory: {self.vector_store_dir}")
             

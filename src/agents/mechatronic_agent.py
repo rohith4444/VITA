@@ -3,11 +3,11 @@ from configs.agent_config import MECHATRONIC_AGENT_CONFIG
 from src.utils.logger import setup_logger
 
 class MechatronicAgent(BaseAgent):
-    def __init__(self):
+    def __init__(self, session=None):
         self.logger = setup_logger("MechatronicAgent")
         self.logger.info("Initializing Mechatronic Agent")
         try:
-            super().__init__(MECHATRONIC_AGENT_CONFIG)
+            super().__init__(MECHATRONIC_AGENT_CONFIG, session=session)
             self.logger.info("Mechatronic Agent initialized successfully")
         except Exception as e:
             self.logger.error(f"Failed to initialize Mechatronic Agent: {str(e)}", exc_info=True)

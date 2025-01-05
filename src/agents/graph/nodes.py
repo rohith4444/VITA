@@ -5,6 +5,7 @@ from src.chains.qa.qa_chain import QAChain
 from src.chains.grading.grad_chain import DocumentGrader
 from src.retrievers.retriever_manager import RetrieverManager
 from src.utils.logger import setup_logger
+from typing import Dict, Any
 
 class AgentNodes:
     """Handles all processing nodes in the agent's workflow graph."""
@@ -103,11 +104,23 @@ class AgentNodes:
             raise
 
     def generate_answer(self, state: AgentGraphState) -> dict:
-        """Generate answer using QA chain."""
+        """Generate answer using QA chain with conversation history."""
         self.logger.info("Starting answer generation")
         try:
+            # Get conversation history from session if available
+            history = []
+            if hasattr(self.agent, 'session') and self.agent.session:
+                self.logger.debug("Retrieving conversation history")
+                history = self.agent.session.get_chat_history({"query": state["question"]})
+                self.logger.debug(f"Retrieved {len(history)} history messages")
+            
             self.logger.debug(f"Using {len(state['documents'])} documents for answer generation")
-            answer = self.qa_chain.invoke(state["question"], state["documents"])
+            answer = self.qa_chain.invoke(
+                question=state["question"],
+                context=state["documents"],
+                agent_type=self.agent.name.lower().replace(" ", "_"),
+                history=history if history else "No previous conversation."  # Ensure history is always passed
+            )
             
             self.logger.debug(f"Generated answer length: {len(answer)}")
             self.logger.info("Answer generation complete")

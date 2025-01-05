@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List
+from typing import List, Optional
 from langgraph.graph import END, StateGraph
 from configs.agent_config import AgentConfig  
 from src.agents.graph.state import AgentGraphState
@@ -9,7 +9,7 @@ from src.utils.logger import setup_logger
 class BaseAgent(ABC):
     """Abstract base class for all agents in the system."""
     
-    def __init__(self, config: AgentConfig):
+    def __init__(self, config: AgentConfig, session=None):
         self.logger = setup_logger(f"agent.{config.name}")
         self.logger.info(f"Initializing {config.name} agent")
         
@@ -18,6 +18,7 @@ class BaseAgent(ABC):
             self.description = config.description
             self.expertise = config.expertise
             self.tools = config.tools
+            self.session = session
             
             # Initialize components
             self.logger.debug("Initializing agent nodes")

@@ -8,12 +8,12 @@ from src.utils.logger import setup_logger
 class SupervisingAgent(BaseAgent):
     """Agent responsible for routing queries to specialized agents."""
     
-    def __init__(self, specialized_agents: List[BaseAgent]):
+    def __init__(self, specialized_agents: List[BaseAgent], session=None):
         self.logger = setup_logger("SupervisingAgent")
         self.logger.info("Initializing SupervisingAgent")
         
         try:
-            super().__init__(SUPERVISING_AGENT_CONFIG)
+            super().__init__(SUPERVISING_AGENT_CONFIG, session=session)
             
             self.logger.debug("Setting up specialized agents")
             self.specialized_agents = specialized_agents

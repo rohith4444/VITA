@@ -18,17 +18,21 @@ class RetrieverManager:
         if agent_name not in cls._instances:
             cls._logger.info(f"Creating new retriever for {agent_name}")
             try:
-                # Convert agent_name to a valid collection name
+                 # Get project root directory
+                root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                
+                # Use absolute paths
+                vector_store_path = os.path.join(root_dir, "vector_stores", agent_name.lower())
+                
                 collection_name = f"{agent_name.replace(' ', '_').lower()}_collection"
 
                 # Connect to vector store
                 vector_store = Chroma(
-                    persist_directory=os.path.join("VITA", "vector_stores", agent_name),
-                    collection_name=collection_name,  # Using sanitized collection name
+                    persist_directory=vector_store_path,
+                    collection_name=collection_name,
                     embedding_function=OpenAIEmbeddings(model='text-embedding-3-small')
                 )
-                
-                # Create retriever
+                    # Create retriever
                 factory = RetrievalFactory(vector_store)
                 retriever = factory.create_retriever(
                     strategy=RetrievalStrategy.CHAINED,
