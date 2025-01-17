@@ -48,9 +48,9 @@
 
 - [ ] Session Management
   - Add user authentication
-  - Implement session persistence
-  - Add multi-user support
-  - Add conversation branching
+  - Implement session persistence (PostgreSQL/MongoDB for session storage, Redis for active session caching)
+  - Add multi-user support (user profiles, authentication tokens, session mapping)
+  - Add conversation branching (tree structure in database, parent-child relationship tracking)
 
 ## Agent System
 - [ ] Agent Capabilities
