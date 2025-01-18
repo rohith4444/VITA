@@ -3,6 +3,7 @@ from src.agents.base_agent import BaseAgent
 from src.utils.llm import get_llm
 from configs.agent_config import SUPERVISING_AGENT_CONFIG
 from src.prompts.routing_prompts import ROUTING_PROMPT_TEMPLATE
+from src.utils.monitoring import monitor_agent
 from src.utils.logger import setup_logger
 
 class SupervisingAgent(BaseAgent):
@@ -27,7 +28,8 @@ class SupervisingAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Failed to initialize SupervisingAgent: {str(e)}", exc_info=True)
             raise
-        
+
+    @monitor_agent    
     async def route_query(self, query: str) -> BaseAgent:
         """Route the query to the most appropriate specialized agent."""
         self.logger.info(f"Routing query: {query}")
@@ -68,6 +70,7 @@ class SupervisingAgent(BaseAgent):
             self.logger.error(f"Error routing query: {str(e)}", exc_info=True)
             raise
     
+    @monitor_agent
     async def process(self, query: str, context: Dict[str, Any] = None) -> str:
         """Process a query by routing it to the appropriate specialized agent."""
         self.logger.info(f"Processing query: {query}")

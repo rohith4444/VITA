@@ -4,6 +4,7 @@ from langgraph.graph import END, StateGraph
 from configs.agent_config import AgentConfig  
 from src.agents.graph.state import AgentGraphState
 from src.agents.graph.nodes import AgentNodes
+from src.utils.monitoring import monitor_agent
 from src.utils.logger import setup_logger
 
 class BaseAgent(ABC):
@@ -75,6 +76,7 @@ class BaseAgent(ABC):
             self.logger.error("Failed to build graph", exc_info=True)
             raise
     
+    @monitor_agent    
     async def answer_question(self, query: str) -> str:
         """Process a query through the agent's graph."""
         self.logger.info(f"Processing query: {query}")

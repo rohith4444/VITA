@@ -1,5 +1,6 @@
 from src.agents.base_agent import BaseAgent
 from configs.agent_config import PYTHON_AGENT_CONFIG
+from src.utils.monitoring import monitor_agent
 from src.utils.logger import setup_logger
 
 class PythonAgent(BaseAgent):
@@ -13,6 +14,7 @@ class PythonAgent(BaseAgent):
             self.logger.error(f"Failed to initialize Python Agent: {str(e)}", exc_info=True)
             raise
     
+    @monitor_agent
     async def process(self, query: str, context: dict = None) -> str:
         self.logger.info(f"Processing query: {query}")
         try:

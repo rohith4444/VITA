@@ -19,8 +19,17 @@ def load_env_variables():
         required_vars = [
             'OPENAI_API_KEY',
             'HUGGINGFACEHUB_API_TOKEN',
-            'TAVILY_API_KEY'
+            'TAVILY_API_KEY',
+            'LANGSMITH_API_KEY'
         ]
+
+        # Optional environment variables with defaults
+        optional_vars = {
+            'LANGCHAIN_TRACING_V2': 'false',
+            'LANGCHAIN_PROJECT': 'VITA_Agents',
+            'LANGCHAIN_ENDPOINT': 'https://api.smith.langchain.com'
+        }
+        
         logger.debug(f"Checking for required variables: {', '.join(required_vars)}")
         
         # Check if all required variables are present
@@ -34,12 +43,26 @@ def load_env_variables():
                 "Please ensure these are set in your .env file."
             )
         
+        # Set optional variables with defaults if not present
+        for var, default in optional_vars.items():
+            if not os.getenv(var):
+                os.environ[var] = default
+                logger.debug(f"Setting default value for {var}")
+        
         # Create environment variables dictionary
         env_vars = {
+            # Required variables
             'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY'),
             'HUGGINGFACEHUB_API_TOKEN': os.getenv('HUGGINGFACEHUB_API_TOKEN'),
-            'TAVILY_API_KEY': os.getenv('TAVILY_API_KEY')
+            'TAVILY_API_KEY': os.getenv('TAVILY_API_KEY'),
+            'LANGCHAIN_API_KEY': os.getenv('LANGCHAIN_API_KEY'),
+            
+            # Optional variables with defaults
+            'LANGCHAIN_TRACING_V2': os.getenv('LANGCHAIN_TRACING_V2'),
+            'LANGCHAIN_PROJECT': os.getenv('LANGCHAIN_PROJECT'),
+            'LANGCHAIN_ENDPOINT': os.getenv('LANGCHAIN_ENDPOINT')
         }
+        
         
         # Log successful loading (without exposing sensitive values)
         logger.info("All required environment variables loaded successfully")
