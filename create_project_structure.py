@@ -1,88 +1,112 @@
 import os
 
 def create_file(path):
-    """Create an empty file."""
-    # Get the directory name of the path
+    """Create an empty file if it doesn't exist."""
     dirname = os.path.dirname(path)
-    
-    # Only create directory if there is a directory path
     if dirname:
         os.makedirs(dirname, exist_ok=True)
-    
-    # Create the file
-    with open(path, 'w') as f:
-        pass
+    if not os.path.exists(path):
+        with open(path, 'w') as f:
+            pass
 
-def setup_project():
-    """Create the project structure inside current directory."""
+def setup_frontend():
+    """Create the frontend project structure while preserving existing files."""
     
-    # Root level files
-    root_files = [
-        '.env.example',
+    # Files to keep (already exist from create-next-app)
+    existing_files = [
         '.gitignore',
         'README.md',
-        'requirements.txt',
-        'setup.py'
+        'next-env.d.ts',
+        'next.config.ts',
+        'package.json',
+        'package-lock.json',
+        'postcss.config.mjs',
+        'tailwind.config.ts',
+        'tsconfig.json',
+        'src/app/layout.tsx',
+        'src/app/page.tsx',
+        'src/app/globals.css',
+        'public/next.svg',
+        'public/vercel.svg'
     ]
     
-    for file in root_files:
-        if not os.path.exists(file):  # Only create if doesn't exist
-            create_file(file)
-    
-    # Create directory structure with __init__.py files
-    dirs = [
-        'configs',
-        'src',
-        'src/agents',
-        'src/prompts',
-        'src/retrievers',
-        'src/utils',
-        'src/chains',
-        'tests',
-        'tests/test_agents',
-        'tests/test_retrievers',
-        'tests/test_chains'
+    # New directories to create
+    new_dirs = [
+        'src/components/chat',
+        'src/components/common',
+        'src/components/ui',
+        'src/hooks',
+        'src/lib/api',
+        'src/lib/utils',
+        'src/types',
+        'src/app/chat',
+        'public/assets'
     ]
     
-    for dir_path in dirs:
-        os.makedirs(dir_path, exist_ok=True)
-        init_file = os.path.join(dir_path, '__init__.py')
-        if not os.path.exists(init_file):  # Only create if doesn't exist
-            create_file(init_file)
-    
-    # Create configuration files
-    config_files = [
-        'configs/agent_config.py',
-        'configs/model_config.py'
+    # New files to create
+    new_files = [
+        # Chat components
+        'src/components/chat/ChatContainer.tsx',
+        'src/components/chat/ChatInput.tsx',
+        'src/components/chat/ChatMessage.tsx',
+        'src/components/chat/ChatWindow.tsx',
+        'src/components/chat/AgentMessage.tsx',
+        'src/components/chat/UserMessage.tsx',
+        'src/components/chat/FileUpload.tsx',
+        
+        # Common components
+        'src/components/common/Header.tsx',
+        'src/components/common/Footer.tsx',
+        
+        # UI components
+        'src/components/ui/button.tsx',
+        'src/components/ui/card.tsx',
+        'src/components/ui/dialog.tsx',
+        'src/components/ui/input.tsx',
+        
+        # Hooks
+        'src/hooks/useChat.ts',
+        'src/hooks/useAgents.ts',
+        'src/hooks/useFileUpload.ts',
+        
+        # API and utils
+        'src/lib/api/agents.ts',
+        'src/lib/api/chat.ts',
+        'src/lib/api/types.ts',
+        'src/lib/utils/constants.ts',
+        'src/lib/utils/helpers.ts',
+        
+        # Types
+        'src/types/index.ts',
+        
+        # Chat pages
+        'src/app/chat/page.tsx',
+        'src/app/chat/loading.tsx'
     ]
     
-    for file in config_files:
-        if not os.path.exists(file):  # Only create if doesn't exist
-            create_file(file)
+    print("Starting frontend structure setup...")
     
-    # Create component files
-    component_files = [
-        'src/agents/base_agent.py',
-        'src/agents/supervising_agent.py',
-        'src/agents/mechatronic_agent.py',
-        'src/agents/python_agent.py',
-        'src/prompts/grading_prompts.py',
-        'src/prompts/routing_prompts.py',
-        'src/prompts/agent_prompts.py',
-        'src/retrievers/base_retriever.py',
-        'src/retrievers/rag_retriever.py',
-        'src/utils/document_processor.py',
-        'src/utils/embeddings.py',
-        'src/utils/llm.py',
-        'src/chains/grading_chain.py',
-        'src/chains/rag_chain.py'
-    ]
+    # Create directories
+    for dir_path in new_dirs:
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+            print(f"Created directory: {dir_path}")
+        except Exception as e:
+            print(f"Error creating directory {dir_path}: {str(e)}")
+        
+    # Create new files
+    for file_path in new_files:
+        try:
+            create_file(file_path)
+            print(f"Created file: {file_path}")
+        except Exception as e:
+            print(f"Error creating file {file_path}: {str(e)}")
     
-    for file in component_files:
-        if not os.path.exists(file):  # Only create if doesn't exist
-            create_file(file)
-            
-    print("Project structure created successfully!")
+    print("\nFrontend structure created successfully!")
+    print("\nExisting files preserved:")
+    for file in existing_files:
+        if os.path.exists(file):
+            print(f"- {file}")
 
 if __name__ == '__main__':
-    setup_project()
+    setup_frontend()
