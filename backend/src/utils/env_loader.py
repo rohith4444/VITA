@@ -25,7 +25,7 @@ def load_env_variables():
 
         # Optional environment variables with defaults
         optional_vars = {
-            'LANGCHAIN_TRACING_V2': 'false',
+            'LANGCHAIN_TRACING_V2': 'true',
             'LANGCHAIN_PROJECT': 'VITA_Agents',
             'LANGCHAIN_ENDPOINT': 'https://api.smith.langchain.com'
         }
