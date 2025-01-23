@@ -1,12 +1,13 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
+// src/app/layout.tsx
+import { Inter } from "next/font/google"
+import "./globals.css"
+import Navbar from "@/components/common/Navbar"
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
-  title: 'VITA - Multi-Agent Chat System',
-  description: 'An advanced multi-agent chat system with specialized AI agents',
+export const metadata = {
+  title: "Aether AI - Advanced AI Solutions",
+  description: "AI products that put innovation at the frontier",
 }
 
 export default function RootLayout({
@@ -16,7 +17,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} min-h-screen bg-[#fdf8f6]`}>
+        <Navbar />
         {children}
       </body>
     </html>

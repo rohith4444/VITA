@@ -1,121 +1,187 @@
-# VITA
+# VITA - AI-Powered Project Development Platform
 
-## Multi-Agent System with LangChain
+VITA is an innovative platform where users can bring their project ideas to life through collaboration with specialized AI agents. The platform transforms project development by providing instant access to a team of AI experts who can plan, execute, and deliver projects across various domains.
 
-A specialized multi-agent system built with LangChain that routes queries to appropriate expert agents for processing.
+## 🎯 Core Concept
 
-## Architecture Overview
+- Users submit project ideas or requirements
+- Platform analyzes requirements and recommends specialized AI agents
+- Users can customize their AI team based on project needs
+- AI team collaborates to plan and execute the project
+- Continuous interaction ensures alignment with user vision
+- Cloud-based delivery of all project artifacts
 
-The system consists of three main components:
-1. **Supervising Agent**: Routes queries to specialized agents
-2. **Specialized Agents**: 
-   - Python Agent: Handles programming-related queries
-   - Mechatronic Agent: Handles hardware and engineering queries
-3. **Core Components**:
-   - Vector Store-based RAG
-   - Web Search capability
-   - Document grading
-   - Query rephrasing
+## 💡 Key Features
 
-## Key Features
+### 1. Project Definition & Planning
+- Interactive requirement gathering
+- Automatic scope analysis
+- Cost and timeline estimation
+- Risk assessment
+- Resource requirement identification
 
-- **Query Routing**: Intelligent routing of queries to specialized agents
-- **RAG Implementation**: Retrieval-Augmented Generation with document grading
-- **Fallback Mechanisms**: Web search when local documents aren't sufficient
-- **Async Processing**: Efficient handling of concurrent operations
-- **Comprehensive Logging**: Detailed logging at all levels
+### 2. AI Team Assembly
+- Intelligent agent recommendation
+- Team composition optimization
+- Expertise matching
+- Role-based team structure
+- Custom team configuration
 
-## Project Structure
+### 3. Project Execution
+- Stage-based development
+- Regular progress updates
+- Quality checkpoints
+- Client review phases
+- Iterative refinement
+
+### 4. Team Collaboration
+- Real-time team chat
+- Progress tracking
+- File sharing
+- Version control
+- Feedback integration
+
+### 5. Cloud Integration
+- Cloud-based artifact storage
+- Organized file structure
+- Documentation generation
+- Code management
+- Asset organization
+
+## 🚀 Project Types
+
+### Software Development
+- Web applications
+- Mobile apps
+- APIs and backends
+- Desktop software
+- Database systems
+
+### Content Creation
+- Technical documentation
+- Marketing content
+- Academic papers
+- Research reports
+- Educational materials
+
+### Design Projects
+- Website design
+- UI/UX design
+- Brand identity
+- Graphic design
+- Prototypes
+
+### Academic Projects
+- Programming assignments
+- Research projects
+- Technical papers
+- Data analysis
+- Project documentation
+
+## 👥 Target Users
+
+1. **Freelancers**
+   - Individual developers needing specialized support
+   - Content creators requiring technical assistance
+   - Designers seeking development help
+
+2. **Students**
+   - Working on academic projects
+   - Developing portfolio pieces
+   - Learning through guided development
+
+3. **Small Businesses**
+   - Needing website development
+   - Requiring software solutions
+   - Seeking content creation
+
+4. **Entrepreneurs**
+   - Building MVPs
+   - Developing proof of concepts
+   - Creating technical documentation
+
+## 🛠 Technical Stack
+
+- **Backend**: FastAPI, LangChain, PostgreSQL
+- **Frontend**: Next.js, React, TailwindCSS
+- **AI/ML**: LangChain for agent development
+- **Infrastructure**: AWS Cloud Services
+- **Storage**: PostgreSQL, Vector Stores (ChromaDB)
+- **Communication**: WebSocket for real-time features
+
+## 🏗 Project Structure
 
 ```
 project/
-├── configs/              # Configuration files
-├── data/                 # Agent-specific document storage
-├── src/                  # Source code
-│   ├── agents/          # Agent implementations
-│   ├── chains/          # LangChain processing chains
-│   ├── prompts/         # System prompts
-│   ├── retrievers/      # Retrieval implementations
-│   └── utils/           # Utility functions
-├── tests/               # Test suites
-└── vector_stores/       # Vector embeddings storage
+├── frontend/                # Next.js frontend application
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── lib/           # Utilities and API
+│   │   └── app/          # Next.js pages
+│   └── public/            # Static assets
+├── backend/               # FastAPI backend
+│   ├── src/
+│   │   ├── agents/       # AI agent implementations
+│   │   ├── api/          # API routes
+│   │   ├── models/       # Data models
+│   │   └── utils/        # Utility functions
+│   └── tests/            # Test suites
+└── docs/                 # Documentation
 ```
 
-## Key Design Patterns Used
+## 🚀 Getting Started
 
-1. **Singleton Pattern**:
-   - LLMManager: Manages LLM instances
-   - RetrieverManager: Manages retriever instances
-
-2. **Factory Pattern**:
-   - RetrievalFactory: Creates different types of retrievers
-
-3. **Abstract Base Classes**:
-   - BaseAgent: Template for specialized agents
-
-4. **Async/Await**:
-   - Used in agents for concurrent operations
-   - Web search and document processing
-
-## Setup and Installation
-
-1. Create a virtual environment:
+1. Clone the repository:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+git clone https://github.com/yourusername/vita.git
 ```
 
-2. Install dependencies:
+2. Install frontend dependencies:
 ```bash
+cd frontend
+npm install
+```
+
+3. Install backend dependencies:
+```bash
+cd backend
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables:
+4. Set up environment variables:
 ```bash
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your configuration
 ```
 
-4. Initialize vector stores:
+5. Start the development servers:
 ```bash
-python -m src.utils.vector_stores_initz
+# Frontend
+npm run dev
+
+# Backend
+python -m uvicorn src.main:app --reload
 ```
 
-## Usage
+## 📚 Documentation
 
-Basic usage example:
-```python
-from src.agents.supervising_agent import SupervisingAgent
-from src.agents.python_agent import PythonAgent
-from src.agents.mechatronic_agent import MechatronicAgent
+- [API Documentation](docs/api.md)
+- [Agent System](docs/agents.md)
+- [Frontend Components](docs/frontend.md)
+- [Deployment Guide](docs/deployment.md)
 
-# Initialize agents
-python_agent = PythonAgent()
-mechatronic_agent = MechatronicAgent()
-supervising_agent = SupervisingAgent([python_agent, mechatronic_agent])
-
-# Process query
-response = await supervising_agent.process("How do I implement a binary search tree?")
-```
-
-## Core Components Documentation
-
-See detailed documentation for each component:
-- [Agents Documentation](docs/agents.md)
-- [Chains Documentation](docs/chains.md)
-- [Retrievers Documentation](docs/retrievers.md)
-- [Utilities Documentation](docs/utils.md)
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Submit a pull request
+3. Make your changes
+4. Submit a pull request
 
-## License
+## 📝 License
 
-[License Type] - See LICENSE file for details
+This project is licensed under the [MIT License](LICENSE)
 
-## Contact
+## 📧 Contact
 
-rohithma05@gmail.com
+For questions and support, please contact: rohithma05@gmail.com

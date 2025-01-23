@@ -1,40 +1,70 @@
+// src/app/page.tsx
+import { Button } from "@/components/ui/button"
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <h1 className="text-4xl font-bold">VITA - Multi-Agent Chat System</h1>
-      </div>
+    <main className="container mx-auto px-4 py-24">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h1 className="text-6xl font-bold leading-tight mb-16">
+            AI <span className="underline decoration-2">products</span> that put innovation at the frontier
+          </h1>
 
-      <div className="mb-32 grid gap-6 text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-2">
-        <a
-          href="/chat"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-neutral-700 hover:bg-neutral-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Start Chat{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              →
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Begin chatting with our specialized AI agents.
-          </p>
-        </a>
+          <div className="grid gap-6">
+            {/* VITA Card */}
+            <div className="bg-white rounded-xl p-8 shadow-sm">
+              <div className="text-sm font-medium text-neutral-600 mb-4">VITA.AI</div>
+              <h2 className="text-2xl font-semibold mb-2">Meet VITA Assistant</h2>
+              <p className="text-neutral-600 mb-6">
+                VITA, our most advanced AI model, is now available.
+              </p>
+              <Button 
+                variant="default"
+                className="w-full bg-black text-white hover:bg-neutral-800"
+              >
+                Talk to VITA
+              </Button>
+            </div>
 
-        <a
-          href="/docs"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-neutral-700 hover:bg-neutral-800/30"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Documentation{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              →
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about our agents and capabilities.
-          </p>
-        </a>
+            {/* API Card */}
+            <div className="bg-white rounded-xl p-8 shadow-sm">
+              <div className="text-sm font-medium text-neutral-600 mb-4">API</div>
+              <h2 className="text-2xl font-semibold mb-2">Build with VITA</h2>
+              <p className="text-neutral-600 mb-6">
+                Create AI-powered applications and custom experiences using VITA.
+              </p>
+              <Button 
+                variant="outline" 
+                className="w-full"
+              >
+                Learn more
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Decorative Illustration */}
+        <div className="hidden lg:block">
+          <svg viewBox="0 0 400 400" className="w-full h-auto" style={{ maxWidth: "500px" }}>
+            <circle cx="200" cy="200" r="20" fill="#E9967A" />
+            <circle cx="300" cy="150" r="20" fill="#E9967A" />
+            <circle cx="250" cy="300" r="20" fill="#E9967A" />
+            <circle cx="100" cy="250" r="20" fill="#E9967A" />
+            <circle cx="150" cy="100" r="20" fill="#E9967A" />
+            <path 
+              d="M200 200 L300 150 L250 300 L100 250 L150 100 Z" 
+              stroke="#E9967A" 
+              strokeWidth="2" 
+              fill="none" 
+            />
+            <path 
+              d="M280 130 Q310 160 340 140" 
+              stroke="black" 
+              strokeWidth="4" 
+              fill="none" 
+            />
+          </svg>
+        </div>
       </div>
     </main>
   )
