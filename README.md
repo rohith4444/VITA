@@ -185,3 +185,9 @@ This project is licensed under the [MIT License](LICENSE)
 ## 📧 Contact
 
 For questions and support, please contact: rohithma05@gmail.com
+
+## running commands personal
+
+python -m src.utils.log_server for logging server
+
+.\.venv\Scripts\activate  for activating virtual environment

@@ -1,13 +1,12 @@
-// src/app/layout.tsx
-import { Inter } from "next/font/google"
 import "./globals.css"
-import Navbar from "@/components/common/Navbar"
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata = {
-  title: "Aether AI - Advanced AI Solutions",
-  description: "AI products that put innovation at the frontier",
+export const metadata: Metadata = {
+  title: "Aether AI - Advanced Artificial Intelligence",
+  description: "AI research and products that put safety at the frontier",
 }
 
 export default function RootLayout({
@@ -17,10 +16,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-[#fdf8f6]`}>
-        <Navbar />
-        {children}
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
+

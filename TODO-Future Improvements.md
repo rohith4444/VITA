@@ -65,6 +65,8 @@
   - Implement multi-agent collaboration
   - Add fallback strategies
 
+-  [] Need to add certifications to agents
+
 ## Evaluation & Testing
 - [ ] Testing Framework
   - Add unit tests
@@ -127,3 +129,5 @@
 ## prompt Engineering for all prompts and better responses.
 
 Note: This list will be updated as new requirements and improvements are identified during development.
+
+## Onlice Code editor and compiler
