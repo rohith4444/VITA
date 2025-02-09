@@ -6,7 +6,15 @@ def display_structure(startpath, exclude_dirs=None, exclude_files=None):
     Uses ASCII characters for Windows compatibility.
     """
     if exclude_dirs is None:
-        exclude_dirs = ['__pycache__', '.git', '.venv', 'venv', 'node_modules', '.next']  # Added .next
+        exclude_dirs = [
+            '__pycache__', 
+            '.git', 
+            '.venv', 
+            'venv', 
+            'node_modules', 
+            '.next',  
+            'backend_v1'  # Added backend_v1 to exclude list
+        ]
     if exclude_files is None:
         exclude_files = ['.pyc', '.pyo', '.pyd', '.DS_Store']
         
