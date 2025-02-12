@@ -1,5 +1,28 @@
-# agents/core/llm/prompts.py
+from core.logging.logger import setup_logger
 
+# Initialize logger
+logger = setup_logger("llm.prompts")
+logger.info("Initializing LLM prompts")
+
+def format_analysis_prompt(features, timeline, constraints):
+    """Format the requirement analysis prompt."""
+    logger.debug(f"Formatting analysis prompt with: features={features}, timeline={timeline}")
+    return REQUIREMENT_ANALYSIS_TEMPLATE.format(
+        features=features,
+        timeline=timeline,
+        constraints=constraints
+    )
+
+def format_task_prompt(scope, features, constraints):
+    """Format the task breakdown prompt."""
+    logger.debug(f"Formatting task prompt with: scope={scope}, features={features}")
+    return TASK_BREAKDOWN_TEMPLATE.format(
+        scope=scope,
+        features=features,
+        constraints=constraints
+    )
+
+# Prompt Templates
 REQUIREMENT_ANALYSIS_TEMPLATE = """
 Analyze the following project requirements for a task management application:
 
@@ -21,18 +44,18 @@ Please provide a structured analysis including:
 6. Timeline feasibility assessment
 
 Format your response as a JSON object with the following structure:
-{{
+{
     "understood_requirements": [],
     "technical_considerations": [],
     "potential_risks": [],
     "suggested_features": [],
     "resource_requirements": [],
-    "timeline_assessment": {{
+    "timeline_assessment": {
         "feasible": boolean,
         "concerns": [],
         "recommendations": []
-    }}
-}}
+    }
+}
 """
 
 TASK_BREAKDOWN_TEMPLATE = """
@@ -57,7 +80,7 @@ Please break down the implementation into detailed tasks, including:
 
 Format your response as a JSON array of task objects with the following structure:
 [
-    {{
+    {
         "id": "string",
         "name": "string",
         "description": "string",
@@ -66,7 +89,7 @@ Format your response as a JSON array of task objects with the following structur
         "required_skills": ["skill_names"],
         "priority": "HIGH|MEDIUM|LOW",
         "complexity": "HIGH|MEDIUM|LOW"
-    }}
+    }
 ]
 """
 
@@ -92,3 +115,5 @@ Please provide a comprehensive risk assessment including:
 
 Format your response as a JSON array of risk objects.
 """
+
+logger.info("LLM prompts initialized successfully")
