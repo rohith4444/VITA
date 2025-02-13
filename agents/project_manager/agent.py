@@ -5,6 +5,11 @@ from agents.core.base_agent import BaseAgent
 from agents.core.llm.service import LLMService
 from agents.core.llm.prompts import REQUIREMENT_ANALYSIS_TEMPLATE, TASK_BREAKDOWN_TEMPLATE
 
+# New memory-related imports
+from memory.memory_manager import MemoryManager
+from memory.base import MemoryType, MemoryEntry
+from memory.base import MemoryType
+
 # Import planning tools and base classes
 from tools.project_planning.base import (
     TaskComplexity,
@@ -31,7 +36,10 @@ from .timeline_service import TimelineService
 class ProjectManagerAgent(BaseAgent):
     """Project Manager Agent responsible for project planning and oversight."""
 
-    def __init__(self, agent_id: str, name: str):
+    def __init__(self, 
+                 agent_id: str, 
+                 name: str, 
+                 memory_manager: MemoryManager):
         super().__init__(agent_id, name)
         
         # Basic project state
@@ -54,6 +62,9 @@ class ProjectManagerAgent(BaseAgent):
             self.logger.debug("Initializing LLM service")
             self.llm_service = LLMService()
             
+            # Memory management
+            self.memory_manager = memory_manager
+
             # Initialize planning tools
             self.logger.debug("Initializing planning tools")
             self.task_estimator = TaskEstimator()
@@ -92,12 +103,16 @@ class ProjectManagerAgent(BaseAgent):
         await self.update_status("analyzing_requirements")
         
         try:
-            # Store project info in working memory
-            await self.update_memory("working", {
-                "project_info": input_data,
-                "analysis_timestamp": datetime.utcnow()
-            })
-            
+            # Store project input in working memory
+            await self.memory_manager.store(
+                agent_id=self.agent_id,
+                memory_type=MemoryType.WORKING,
+                content={
+                    "project_input": input_data,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            )
+
             # Analyze requirements using LLM
             self.pm_logger.info("Starting requirements analysis")
             analysis_result = await self._analyze_requirements(input_data)
@@ -134,11 +149,34 @@ class ProjectManagerAgent(BaseAgent):
                 "project_plan": self.project_plan
             }
             
+
+            # Store analysis in long-term memory with importance
+            await self.memory_manager.store(
+                agent_id=self.agent_id,
+                memory_type=MemoryType.LONG_TERM,
+                content={
+                    "analysis_result": analysis_result,
+                    "project_type": input_data.get("project_type")
+                },
+                metadata={
+                    "importance": 0.7,  # High importance for project analysis
+                    "source": "initial_analysis"
+                }
+            )
+            
             self.logger.info("Project input processing completed successfully")
             return result
-            
+                
         except Exception as e:
             self.logger.error(f"Error processing project input: {str(e)}")
+            await self.memory_manager.store(
+            agent_id=self.agent_id,
+            memory_type=MemoryType.SHORT_TERM,
+            content={
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+                }
+            )
             raise
 
     async def _analyze_requirements(self, requirements: Dict[str, Any]) -> Dict[str, Any]:
@@ -1464,4 +1502,70 @@ class ProjectManagerAgent(BaseAgent):
                 "allocation_error": str(e),
                 "error_timestamp": datetime.utcnow()
             })
+            raise
+
+
+    async def retrieve_similar_project_memories(self, current_project: Dict[str, Any]) -> List[MemoryEntry]:
+        """Retrieve memories of similar past projects."""
+        try:
+            # Create a query based on current project characteristics
+            query = {
+                "project_type": current_project.get("project_type"),
+                "complexity": current_project.get("complexity")
+            }
+            
+            # Retrieve similar project memories
+            similar_projects = await self.memory_manager.retrieve(
+                agent_id=self.agent_id,
+                memory_type=MemoryType.LONG_TERM,
+                query=query,
+                sort_by="importance",
+                limit=5  # Top 5 most important similar projects
+            )
+            
+            return similar_projects
+        except Exception as e:
+            self.logger.error(f"Error retrieving project memories: {str(e)}")
+            return []
+        
+
+    async def consolidate_project_memories(self) -> bool:
+        """Consolidate important short-term memories to long-term storage."""
+        try:
+            # Consolidate memories with importance threshold of 0.5
+            return await self.memory_manager.consolidate_to_long_term(
+                agent_id=self.agent_id,
+                importance_threshold=0.5
+            )
+        except Exception as e:
+            self.logger.error(f"Memory consolidation failed: {str(e)}")
+            return False
+        
+
+    @classmethod
+    async def create(self, cls, 
+                    agent_id: str, 
+                    name: str, 
+                    db_url: str) -> 'ProjectManagerAgent':
+        """
+        Async factory method to create a ProjectManagerAgent with memory management.
+        
+        Args:
+            agent_id: Unique identifier for the agent
+            name: Agent name
+            db_url: Database connection string for long-term memory
+        
+        Returns:
+            ProjectManagerAgent: Initialized agent with memory management
+        """
+        try:
+            # Create memory manager
+            memory_manager = await MemoryManager.create(db_url)
+            
+            # Create agent instance
+            agent = cls(agent_id, name, memory_manager)
+            
+            return agent
+        except Exception as e:
+            self.logger.error(f"Failed to create ProjectManagerAgent: {str(e)}")
             raise
