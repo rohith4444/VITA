@@ -1,13 +1,15 @@
-import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from core.logging.logger import setup_logger
 from .base import MemoryType, MemoryEntry
 from .short_term.in_memory import ShortTermMemory
 from .working.working_memory import WorkingMemory
 from .long_term.persistent import LongTermMemory
 from backend.config import Config
 
-logger = logging.getLogger(__name__)
+# Initialize module logger
+logger = setup_logger("memory.manager")
+logger.info("Initializing Memory Manager module")
 
 class MemoryManager:
     """
@@ -20,35 +22,57 @@ class MemoryManager:
                  short_term: ShortTermMemory,
                  working: WorkingMemory,
                  long_term: LongTermMemory):
-        self.short_term = short_term
-        self.working = working
-        self.long_term = long_term
-        logger.info("Memory Manager initialized with all memory systems")
+        self.logger = setup_logger("memory.manager.instance")
+        self.logger.info("Initializing new Memory Manager instance")
+        
+        try:
+            self.short_term = short_term
+            self.working = working
+            self.long_term = long_term
+            self.logger.info("Memory Manager initialized with all memory systems")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Memory Manager: {str(e)}", exc_info=True)
+            raise
     
     @classmethod
-    async def create(cls, db_url: str):
+    async def create(cls, db_url: str) -> 'MemoryManager':
         """
-        Create a new MemoryManager instance with all memory systems
+        Create a new MemoryManager instance with all memory systems.
         
         Args:
             db_url: Database connection string for long-term memory
             
         Returns:
             MemoryManager: Initialized memory manager instance
+            
+        Raises:
+            ValueError: If db_url is invalid
+            ConnectionError: If database connection fails
         """
+        logger.info("Creating new Memory Manager instance")
+        
+        if not db_url:
+            logger.error("Invalid database URL provided")
+            raise ValueError("Database URL cannot be empty")
+            
         try:
             # Initialize memory systems
             short_term = ShortTermMemory()
+            logger.debug("Short-term memory initialized")
+            
             working = WorkingMemory()
+            logger.debug("Working memory initialized")
+            
             long_term = await LongTermMemory.create(Config.database_url())
+            logger.debug("Long-term memory initialized")
             
             logger.info("Successfully created Memory Manager with all subsystems")
             return cls(short_term, working, long_term)
             
         except Exception as e:
-            logger.error(f"Failed to create Memory Manager: {str(e)}")
+            logger.error(f"Failed to create Memory Manager: {str(e)}", exc_info=True)
             raise
-    
+
     async def store(self,
                    agent_id: str,
                    memory_type: MemoryType,
@@ -56,7 +80,7 @@ class MemoryManager:
                    metadata: Optional[Dict[str, Any]] = None,
                    importance: float = 0.0) -> bool:
         """
-        Store information in the specified memory system
+        Store information in the specified memory system.
         
         Args:
             agent_id: Unique identifier for the agent
@@ -67,7 +91,25 @@ class MemoryManager:
             
         Returns:
             bool: Success status of the store operation
+            
+        Raises:
+            ValueError: If parameters are invalid
         """
+        self.logger.info(f"Storing memory for agent {agent_id} in {memory_type.value}")
+        
+        # Validate inputs
+        if not agent_id or not agent_id.strip():
+            self.logger.error("Invalid agent_id provided")
+            raise ValueError("agent_id cannot be empty")
+            
+        if not content:
+            self.logger.error("Empty content provided")
+            raise ValueError("content cannot be empty")
+            
+        if not 0.0 <= importance <= 1.0:
+            self.logger.error(f"Invalid importance score: {importance}")
+            raise ValueError("importance must be between 0.0 and 1.0")
+        
         try:
             # Add importance to metadata for long-term storage
             if memory_type == MemoryType.LONG_TERM:
@@ -84,20 +126,25 @@ class MemoryManager:
                 timestamp=datetime.utcnow()
             )
             
+            self.logger.debug(f"Created memory entry with timestamp {entry.timestamp}")
+            
             if memory_type == MemoryType.SHORT_TERM:
-                return await self.short_term.store(entry)
+                result = await self.short_term.store(entry)
             elif memory_type == MemoryType.WORKING:
-                return await self.working.store(entry)
+                result = await self.working.store(entry)
             elif memory_type == MemoryType.LONG_TERM:
-                return await self.long_term.store(entry)
+                result = await self.long_term.store(entry)
             else:
-                logger.error(f"Invalid memory type: {memory_type}")
+                self.logger.error(f"Invalid memory type: {memory_type}")
                 return False
                 
+            self.logger.info(f"Successfully stored memory in {memory_type.value}")
+            return result
+                
         except Exception as e:
-            logger.error(f"Error storing memory: {str(e)}")
+            self.logger.error(f"Error storing memory: {str(e)}", exc_info=True)
             return False
-    
+        
     async def retrieve(self,
                       agent_id: str,
                       memory_type: MemoryType,
@@ -105,7 +152,7 @@ class MemoryManager:
                       sort_by: str = "timestamp",
                       limit: int = 100) -> List[MemoryEntry]:
         """
-        Retrieve information from the specified memory system
+        Retrieve information from the specified memory system.
         
         Args:
             agent_id: Unique identifier for the agent
@@ -116,64 +163,57 @@ class MemoryManager:
             
         Returns:
             List[MemoryEntry]: List of matching memory entries
+            
+        Raises:
+            ValueError: If parameters are invalid
         """
+        self.logger.info(f"Retrieving memories for agent {agent_id} from {memory_type.value}")
+        
+        # Validate inputs
+        if not agent_id or not agent_id.strip():
+            self.logger.error("Invalid agent_id provided")
+            raise ValueError("agent_id cannot be empty")
+            
+        if limit < 1:
+            self.logger.error(f"Invalid limit: {limit}")
+            raise ValueError("limit must be positive")
+            
+        valid_sort_fields = {"timestamp", "importance", "access_count"}
+        if sort_by not in valid_sort_fields:
+            self.logger.error(f"Invalid sort field: {sort_by}")
+            raise ValueError(f"sort_by must be one of {valid_sort_fields}")
+        
         try:
+            self.logger.debug(f"Retrieving with query: {query}")
+            
             if memory_type == MemoryType.SHORT_TERM:
-                return await self.short_term.retrieve(agent_id, query)
+                results = await self.short_term.retrieve(agent_id, query)
             elif memory_type == MemoryType.WORKING:
-                return await self.working.retrieve(agent_id, query)
+                results = await self.working.retrieve(agent_id, query)
             elif memory_type == MemoryType.LONG_TERM:
-                return await self.long_term.retrieve(
+                results = await self.long_term.retrieve(
                     agent_id,
                     query,
                     sort_by=sort_by,
                     limit=limit
                 )
             else:
-                logger.error(f"Invalid memory type: {memory_type}")
+                self.logger.error(f"Invalid memory type: {memory_type}")
                 return []
                 
-        except Exception as e:
-            logger.error(f"Error retrieving memory: {str(e)}")
-            return []
-    
-    async def update(self,
-                    agent_id: str,
-                    memory_type: MemoryType,
-                    query: Dict[str, Any],
-                    update_data: Dict[str, Any]) -> bool:
-        """
-        Update existing information in the specified memory system
-        
-        Args:
-            agent_id: Unique identifier for the agent
-            memory_type: Type of memory to update
-            query: Query to identify the memory to update
-            update_data: New data to update with
-            
-        Returns:
-            bool: Success status of the update operation
-        """
-        try:
-            if memory_type == MemoryType.SHORT_TERM:
-                return await self.short_term.update(agent_id, query, update_data)
-            elif memory_type == MemoryType.WORKING:
-                return await self.working.update(agent_id, query, update_data)
-            elif memory_type == MemoryType.LONG_TERM:
-                return await self.long_term.update(agent_id, query, update_data)
-            else:
-                logger.error(f"Invalid memory type: {memory_type}")
-                return False
+            self.logger.info(f"Retrieved {len(results)} memories from {memory_type.value}")
+            self.logger.debug(f"First few results: {results[:3] if results else []}")
+            return results
                 
         except Exception as e:
-            logger.error(f"Error updating memory: {str(e)}")
-            return False
-    
+            self.logger.error(f"Error retrieving memories: {str(e)}", exc_info=True)
+            return []
+
     async def consolidate_to_long_term(self,
                                      agent_id: str,
                                      importance_threshold: float = 0.5) -> bool:
         """
-        Consolidate important short-term memories to long-term storage
+        Consolidate important short-term memories to long-term storage.
         
         Args:
             agent_id: Unique identifier for the agent
@@ -181,96 +221,46 @@ class MemoryManager:
             
         Returns:
             bool: Success status of the consolidation operation
+            
+        Raises:
+            ValueError: If parameters are invalid
         """
+        self.logger.info(f"Starting memory consolidation for agent {agent_id}")
+        
+        # Validate inputs
+        if not agent_id or not agent_id.strip():
+            self.logger.error("Invalid agent_id provided")
+            raise ValueError("agent_id cannot be empty")
+            
+        if not 0.0 <= importance_threshold <= 1.0:
+            self.logger.error(f"Invalid importance threshold: {importance_threshold}")
+            raise ValueError("importance_threshold must be between 0.0 and 1.0")
+        
         try:
+            self.logger.debug(f"Retrieving memories with importance >= {importance_threshold}")
             memories = await self.short_term.retrieve(agent_id)
             consolidated_count = 0
             
             for memory in memories:
                 importance = memory.metadata.get('importance', 0.0) if memory.metadata else 0.0
+                
                 if importance >= importance_threshold:
-                    memory.metadata = {**(memory.metadata or {}), 'consolidated_at': datetime.utcnow().isoformat()}
+                    self.logger.debug(f"Consolidating memory with importance {importance}")
+                    
+                    # Add consolidation metadata
+                    memory.metadata = {
+                        **(memory.metadata or {}),
+                        'consolidated_at': datetime.utcnow().isoformat(),
+                        'original_memory_type': memory.memory_type.value
+                    }
+                    
                     if await self.long_term.store(memory):
                         consolidated_count += 1
+                        self.logger.debug(f"Successfully consolidated memory {consolidated_count}")
             
-            logger.info(f"Consolidated {consolidated_count} short-term memories to long-term storage for agent {agent_id}")
+            self.logger.info(f"Consolidated {consolidated_count} memories for agent {agent_id}")
             return True
         
         except Exception as e:
-            logger.error(f"Error consolidating memories: {str(e)}")
-            return False
-    
-    async def add_memory_relationship(self,
-                                    agent_id: str,
-                                    source_id: int,
-                                    target_id: int,
-                                    relationship_type: str,
-                                    metadata: Optional[Dict[str, Any]] = None) -> bool:
-        """
-        Add a relationship between two long-term memories
-        
-        Args:
-            agent_id: Agent identifier
-            source_id: ID of the source memory
-            target_id: ID of the target memory
-            relationship_type: Type of relationship
-            metadata: Optional relationship metadata
-            
-        Returns:
-            bool: Success status
-        """
-        try:
-            return await self.long_term.add_relationship(
-                source_id,
-                target_id,
-                relationship_type,
-                metadata
-            )
-        except Exception as e:
-            logger.error(f"Error adding memory relationship: {str(e)}")
-            return False
-    
-    async def update_memory_importance(self,
-                                     agent_id: str,
-                                     memory_id: int,
-                                     importance: float) -> bool:
-        """
-        Update the importance score of a long-term memory
-        
-        Args:
-            agent_id: Agent identifier
-            memory_id: ID of the memory
-            importance: New importance score (0.0 to 1.0)
-            
-        Returns:
-            bool: Success status
-        """
-        try:
-            return await self.long_term.update_importance(memory_id, importance)
-        except Exception as e:
-            logger.error(f"Error updating memory importance: {str(e)}")
-            return False
-    
-    async def cleanup_old_memories(self,
-                                 agent_id: str,
-                                 max_age_days: int = 90,
-                                 min_importance: float = 0.5) -> bool:
-        """
-        Clean up old, low-importance memories from long-term storage
-        
-        Args:
-            agent_id: Agent identifier
-            max_age_days: Maximum age of memories to keep
-            min_importance: Minimum importance score to keep
-            
-        Returns:
-            bool: Success status
-        """
-        try:
-            return await self.long_term.cleanup_old_memories(
-                max_age_days,
-                min_importance
-            )
-        except Exception as e:
-            logger.error(f"Error cleaning up old memories: {str(e)}")
+            self.logger.error(f"Error during memory consolidation: {str(e)}", exc_info=True)
             return False
