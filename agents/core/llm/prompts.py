@@ -1,119 +1,58 @@
 from core.logging.logger import setup_logger
+from typing import Dict, Any, List
 
 # Initialize logger
 logger = setup_logger("llm.prompts")
 logger.info("Initializing LLM prompts")
 
-def format_analysis_prompt(features, timeline, constraints):
-    """Format the requirement analysis prompt."""
-    logger.debug(f"Formatting analysis prompt with: features={features}, timeline={timeline}")
-    return REQUIREMENT_ANALYSIS_TEMPLATE.format(
-        features=features,
-        timeline=timeline,
-        constraints=constraints
-    )
+def format_requirement_analysis_prompt(project_description: str) -> str:
+    """Format the prompt for analyzing and restructuring user input."""
+    logger.debug(f"Formatting requirement analysis prompt for description: {project_description}")
 
-def format_task_prompt(scope, features, constraints):
-    """Format the task breakdown prompt."""
-    logger.debug(f"Formatting task prompt with: scope={scope}, features={features}")
-    return TASK_BREAKDOWN_TEMPLATE.format(
-        scope=scope,
-        features=features,
-        constraints=constraints
-    )
+    return f"""
+    The user has provided the following unstructured project request:
 
-# Prompt Templates
-REQUIREMENT_ANALYSIS_TEMPLATE = """
-Analyze the following project requirements for a task management application:
+    "{project_description}"
 
-Features:
-{features}
+    Please rewrite this in a professional and structured way so that AI agents can understand it better.
+    Then, extract and list the core features of the project.
 
-Timeline:
-{timeline}
+    Format the response as a JSON object with:
+    {{
+        "restructured_requirements": "<professionalized version of user input>",
+        "features": ["Feature 1", "Feature 2", ...]
+    }}
+    """
 
-Constraints:
-{constraints}
+def format_project_plan_prompt(problem_statement: str, features: List[str]) -> str:
+    """Format the prompt for generating a milestone-based project plan."""
+    logger.debug(f"Formatting project plan prompt for problem: {problem_statement}, features: {features}")
 
-Please provide a structured analysis including:
-1. Understanding of core requirements
-2. Technical considerations and architecture recommendations
-3. Potential risks and challenges
-4. Suggested additional features or improvements
-5. Resource requirements and skill sets needed
-6. Timeline feasibility assessment
+    return f"""
+    Given the following problem statement:
 
-Format your response as a JSON object with the following structure:
-{
-    "understood_requirements": [],
-    "technical_considerations": [],
-    "potential_risks": [],
-    "suggested_features": [],
-    "resource_requirements": [],
-    "timeline_assessment": {
-        "feasible": boolean,
-        "concerns": [],
-        "recommendations": []
-    }
-}
-"""
+    "{problem_statement}"
 
-TASK_BREAKDOWN_TEMPLATE = """
-Based on the following project analysis, provide a detailed task breakdown for a task management application:
+    And these key features:
+    {features}
 
-Scope:
-{scope}
+    Please generate a structured project plan that includes:
+    - A list of major **milestones** required to build the system.
+    - Step-by-step **tasks** under each milestone.
+    - **Dependencies** between tasks.
+    - **Effort level** (LOW, MEDIUM, HIGH) for each task.
 
-Features:
-{features}
-
-Constraints:
-{constraints}
-
-Please break down the implementation into detailed tasks, including:
-1. Task name and description
-2. Estimated duration
-3. Dependencies
-4. Required skills
-5. Priority level
-6. Complexity assessment
-
-Format your response as a JSON array of task objects with the following structure:
-[
-    {
-        "id": "string",
-        "name": "string",
-        "description": "string",
-        "duration_days": number,
-        "dependencies": ["task_ids"],
-        "required_skills": ["skill_names"],
-        "priority": "HIGH|MEDIUM|LOW",
-        "complexity": "HIGH|MEDIUM|LOW"
-    }
-]
-"""
-
-RISK_ASSESSMENT_TEMPLATE = """
-Analyze the potential risks for the following project aspects:
-
-Technical Stack:
-{tech_stack}
-
-Features:
-{features}
-
-Timeline:
-{timeline}
-
-Please provide a comprehensive risk assessment including:
-1. Technical risks
-2. Timeline risks
-3. Resource risks
-4. Integration risks
-5. Security risks
-6. Scalability risks
-
-Format your response as a JSON array of risk objects.
-"""
+    Format the response as a JSON object:
+    {{
+        "milestones": [
+            {{
+                "name": "Milestone Name",
+                "tasks": [
+                    {{"id": "1", "name": "Task Name", "dependencies": ["id"], "effort": "HIGH"}}
+                ]
+            }}
+        ]
+    }}
+    """
 
 logger.info("LLM prompts initialized successfully")

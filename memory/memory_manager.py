@@ -1,12 +1,11 @@
-# memory/memory_manager.py
-
 import logging
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from .base import MemoryType, MemoryEntry
 from .short_term.in_memory import ShortTermMemory
 from .working.working_memory import WorkingMemory
 from .long_term.persistent import LongTermMemory
+from backend.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class MemoryManager:
             # Initialize memory systems
             short_term = ShortTermMemory()
             working = WorkingMemory()
-            long_term = await LongTermMemory.create(db_url)
+            long_term = await LongTermMemory.create(Config.database_url())
             
             logger.info("Successfully created Memory Manager with all subsystems")
             return cls(short_term, working, long_term)
@@ -184,33 +183,19 @@ class MemoryManager:
             bool: Success status of the consolidation operation
         """
         try:
-            # Get relevant short-term memories
             memories = await self.short_term.retrieve(agent_id)
             consolidated_count = 0
             
             for memory in memories:
-                # Calculate importance (you might want to implement a more sophisticated method)
                 importance = memory.metadata.get('importance', 0.0) if memory.metadata else 0.0
-                
                 if importance >= importance_threshold:
-                    # Add consolidation metadata
-                    memory.metadata = {
-                        **(memory.metadata or {}),
-                        'consolidated_at': datetime.utcnow().isoformat(),
-                        'source': 'short_term',
-                        'importance': importance
-                    }
-                    
-                    # Store in long-term memory
+                    memory.metadata = {**(memory.metadata or {}), 'consolidated_at': datetime.utcnow().isoformat()}
                     if await self.long_term.store(memory):
                         consolidated_count += 1
             
-            logger.info(
-                f"Consolidated {consolidated_count} out of {len(memories)} "
-                f"memories to long-term storage for agent {agent_id}"
-            )
+            logger.info(f"Consolidated {consolidated_count} short-term memories to long-term storage for agent {agent_id}")
             return True
-            
+        
         except Exception as e:
             logger.error(f"Error consolidating memories: {str(e)}")
             return False

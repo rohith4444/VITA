@@ -1,84 +1,78 @@
-# agents/core/base_agent.py
-
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
 from datetime import datetime
+from typing import Dict, Any, Optional, List
 from core.logging.logger import setup_logger
+from memory.memory_manager import MemoryManager
+from memory.base import MemoryType
+from langgraph.graph import StateGraph, END
 
 class BaseAgent(ABC):
-    """Base class for all agents in the system."""
+    """Abstract base class for all agents using LangGraph."""
     
-    def __init__(self, agent_id: str, name: str):
+    def __init__(self, agent_id: str, name: str, memory_manager: MemoryManager):
         self.agent_id = agent_id
         self.name = name
         self.created_at = datetime.utcnow()
         self.status = "initialized"
-        self.current_task = None
-        self.memory = {
-            "short_term": [],
-            "working": {},
-            "episodic": []
-        }
-        # Initialize logger with agent name
+        self.memory_manager = memory_manager  # ✅ Integrated MemoryManager
+        
+        # Initialize logger
         self.logger = setup_logger(f"agent.{self.name.lower()}")
         self.logger.info(f"Initializing agent: {self.name} (ID: {self.agent_id})")
 
+        # Initialize processing graph
+        self.logger.info("Building agent state graph")
+        self.graph = self._build_graph()
+    
+    def _build_graph(self) -> StateGraph:
+        """Builds the LangGraph-based execution flow for this agent."""
+        graph = StateGraph(dict)
+
+        # Add agent-specific nodes (to be overridden in child classes)
+        self.add_graph_nodes(graph)
+
+        # Define the entry point
+        graph.set_entry_point("start")
+        
+        # Compile the execution graph
+        return graph.compile()
+    
     @abstractmethod
-    async def process_input(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process input data and return results."""
+    def add_graph_nodes(self, graph: StateGraph) -> None:
+        """Each agent defines its own processing nodes."""
         pass
 
-    @abstractmethod
-    async def reflect(self) -> Dict[str, Any]:
-        """Perform self-reflection and analysis."""
-        pass
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Executes the agent's workflow using LangGraph."""
+        self.logger.info(f"Running agent process with input: {input_data}")
+        result = self.graph.invoke({"input": input_data, "status": self.status})
+        self.logger.info("Agent processing completed.")
+        return result
 
     async def update_memory(self, memory_type: str, data: Any) -> None:
-        """Update agent's memory."""
+        """Update agent's memory using MemoryManager."""
         self.logger.debug(f"Updating {memory_type} memory")
         try:
-            if memory_type == "short_term":
-                # Keep only recent items in short-term memory
-                self.memory["short_term"].append({
-                    "timestamp": datetime.utcnow(),
-                    "data": data
-                })
-                # Maintain only last 10 items
-                self.memory["short_term"] = self.memory["short_term"][-10:]
-                self.logger.debug(f"Short-term memory updated, size: {len(self.memory['short_term'])}")
-            
-            elif memory_type == "working":
-                # Update working memory with current state
-                self.memory["working"].update(data)
-                self.logger.debug("Working memory updated with new data")
-            
-            elif memory_type == "episodic":
-                # Add to episodic memory with timestamp
-                self.memory["episodic"].append({
-                    "timestamp": datetime.utcnow(),
-                    "data": data
-                })
-                self.logger.debug("Added new entry to episodic memory")
+            await self.memory_manager.store(self.agent_id, MemoryType[memory_type.upper()], data)
         except Exception as e:
-            self.logger.error(f"Error updating {memory_type} memory: {str(e)}")
-            raise
-
+            self.logger.error(f"Error updating memory: {str(e)}")
+    
     async def get_memory(self, memory_type: str) -> Any:
-        """Retrieve data from agent's memory."""
+        """Retrieve data from agent's memory using MemoryManager."""
         self.logger.debug(f"Retrieving {memory_type} memory")
         try:
-            return self.memory.get(memory_type)
+            return await self.memory_manager.retrieve(self.agent_id, MemoryType[memory_type.upper()])
         except Exception as e:
-            self.logger.error(f"Error retrieving {memory_type} memory: {str(e)}")
-            raise
-
+            self.logger.error(f"Error retrieving memory: {str(e)}")
+            return None
+    
     async def update_status(self, status: str) -> None:
-        """Update agent's current status."""
+        """Update agent's current status and store it in working memory."""
         self.logger.info(f"Status update: {self.status} -> {status}")
         self.status = status
         await self.update_memory("working", {"status": status})
 
     @abstractmethod
     async def generate_report(self) -> Dict[str, Any]:
-        """Generate report of agent's activities and findings."""
+        """Generate a report of the agent's activities and findings."""
         pass

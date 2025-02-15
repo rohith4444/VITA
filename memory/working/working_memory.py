@@ -1,5 +1,3 @@
-# memory/working/working_memory.py
-
 import asyncio
 from datetime import datetime
 from typing import Dict, List, Any, Optional
@@ -80,3 +78,12 @@ class WorkingMemory(BaseMemory):
         """Get the current working state for an agent"""
         async with self._lock:
             return self._storage.get(agent_id, {}).copy()
+        
+    async def clear_if_inactive(self, agent_id: str, inactive_duration: timedelta = timedelta(hours=6)) -> bool:
+        """Clears working memory if inactive for more than `inactive_duration`."""
+        async with self._lock:
+            last_updated = self._storage.get(agent_id, {}).get("last_updated")
+            if last_updated and datetime.utcnow() - last_updated > inactive_duration:
+                del self._storage[agent_id]
+                return True
+        return False

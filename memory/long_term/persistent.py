@@ -1,8 +1,8 @@
 import json
 import asyncpg
 import logging
-from datetime import datetime
-from typing import Dict, List, Any, Optional, Union
+from backend.config import Config
+from typing import Dict, List, Any, Optional
 from ..base import BaseMemory, MemoryEntry, MemoryType
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class LongTermMemory(BaseMemory):
         try:
             # Create connection pool
             pool = await asyncpg.create_pool(
-                dsn,
+                dsn=Config.database_url(),
                 min_size=5,
                 max_size=20,
                 command_timeout=60
