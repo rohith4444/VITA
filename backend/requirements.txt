@@ -1,0 +1,25 @@
+# langchain
+langchain
+langchain-openai
+langchain-community
+langgraph
+langchain-text-splitters
+langchain-huggingface
+langchain-chroma
+
+# Document processing
+unstructured[all-docs]
+jq
+pypdf
+pymupdf
+
+# ML and NLP
+spacy
+sentence-transformers
+tiktoken
+
+# Other dependencies
+python-dotenv
+pydantic
+tqdm
+tavily-python
