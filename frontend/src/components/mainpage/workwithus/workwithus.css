@@ -1,0 +1,62 @@
+/* WorkWithAnthropic.css */
+.work-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #F4F2EC;
+    padding: 40px;
+}
+
+.work-card {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-primary-light);
+    /* background-color: white; */
+    /* border-radius: 16px; */
+    padding: 24px;
+    /* max-width: 900px; */
+    /* box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); */
+}
+
+.work-image {
+    width: 50%;
+    height: auto;
+    border-radius: 16px;
+    object-fit: cover;
+}
+
+.work-content {
+    padding: 20px;
+    width: 50%;
+}
+
+.work-heading {
+    font-size: 24px;
+    font-weight: bold;
+    color: black;
+    margin-bottom: 10px;
+}
+
+.work-description {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.work-button {
+    background-color: white;
+    color: black;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 20px;
+    border: 2px solid black;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+
+.work-button:hover {
+    background-color: black;
+    color: white;
+}
