@@ -1,8 +1,9 @@
 from core.logging.logger import setup_logger
 from typing import Dict, Any, List
 
-logger = setup_logger("resource_allocator")
+logger = setup_logger("tools.project_manager.resource_allocator")
 
+# Define agent capabilities
 AGENTS = {
     "Solution Architect": ["architecture", "database design"],
     "Full Stack Developer": ["backend", "frontend", "API development"],
@@ -10,17 +11,43 @@ AGENTS = {
 }
 
 def allocate_resources(milestones: List[Dict[str, Any]]) -> Dict[str, List[str]]:
-    """Assign tasks to the most suitable agents."""
-    logger.info("Allocating resources to tasks")
+    """
+    Assign tasks to the most suitable agents.
+    
+    Args:
+        milestones: List of project milestones with tasks
+        
+    Returns:
+        Dict[str, List[str]]: Agent to task ID mappings
+    """
+    logger.info("Starting resource allocation")
+    
+    if not milestones:
+        logger.warning("No milestones provided for resource allocation")
+        return {agent: [] for agent in AGENTS.keys()}
 
-    allocation = {agent: [] for agent in AGENTS.keys()}
+    try:
+        allocation = {agent: [] for agent in AGENTS.keys()}
+        unassigned_tasks = []
 
-    for milestone in milestones:
-        for task in milestone["tasks"]:
-            for agent, skills in AGENTS.items():
-                if any(skill in task["name"].lower() for skill in skills):
-                    allocation[agent].append(task["id"])
-                    break  # Assign only once
+        for milestone in milestones:
+            for task in milestone["tasks"]:
+                assigned = False
+                for agent, skills in AGENTS.items():
+                    if any(skill in task["name"].lower() for skill in skills):
+                        allocation[agent].append(task["id"])
+                        assigned = True
+                        break
+                
+                if not assigned:
+                    unassigned_tasks.append(task["id"])
 
-    logger.debug(f"Resource Allocation: {allocation}")
-    return allocation
+        if unassigned_tasks:
+            logger.warning(f"Unassigned tasks: {unassigned_tasks}")
+
+        logger.info(f"Completed resource allocation for {sum(len(tasks) for tasks in allocation.values())} tasks")
+        return allocation
+        
+    except Exception as e:
+        logger.error(f"Error during resource allocation: {str(e)}", exc_info=True)
+        return {agent: [] for agent in AGENTS.keys()}

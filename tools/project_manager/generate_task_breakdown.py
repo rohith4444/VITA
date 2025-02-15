@@ -1,30 +1,46 @@
 import json
 from core.logging.logger import setup_logger
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from agents.core.llm.service import LLMService
 from agents.core.llm.prompts import format_project_plan_prompt
 from .task_estimator import estimate_task_complexity
 
-logger = setup_logger("generate_task_breakdown")
+logger = setup_logger("tools.project_manager.task_breakdown")
 
-async def generate_task_breakdown(problem_statement: str, features: List[str], llm_service: LLMService) -> List[Dict[str, Any]]:
+async def generate_task_breakdown(
+    problem_statement: str, 
+    features: List[str], 
+    llm_service: LLMService
+) -> List[Dict[str, Any]]:
     """
     Generate a structured task breakdown using LLM and refine tasks with heuristics.
+    
+    Args:
+        problem_statement: Project description
+        features: List of project features
+        llm_service: LLM service instance
+        
+    Returns:
+        List[Dict[str, Any]]: List of milestones with tasks
     """
-    logger.info("Generating structured task breakdown using LLM")
+    logger.info("Starting task breakdown generation")
+    
+    if not problem_statement or not features:
+        logger.error("Invalid input: empty problem statement or features")
+        return []
     
     try:
         # Step 1: Format the LLM prompt
         prompt = format_project_plan_prompt(problem_statement, features)
+        logger.debug(f"Generated prompt length: {len(prompt)}")
 
         # Step 2: Call LLM to generate milestone-based tasks
         response = await llm_service.generate_project_plan(prompt)
-        
-        logger.debug(f"LLM Task Breakdown Response: {response}")
+        logger.debug("Received LLM response")
 
         # Step 3: Process LLM response
         plan = json.loads(response)
-
+        
         milestones = []
         for milestone in plan["milestones"]:
             tasks = []
@@ -35,15 +51,17 @@ async def generate_task_breakdown(problem_statement: str, features: List[str], l
                     "dependencies": task.get("dependencies", []),
                     "effort": estimate_task_complexity(task["name"]),
                 })
-            milestones.append({"name": milestone["name"], "tasks": tasks})
+            milestones.append({
+                "name": milestone["name"], 
+                "tasks": tasks
+            })
 
-        logger.info("Task breakdown successfully generated and refined.")
+        logger.info(f"Generated {len(milestones)} milestones with {sum(len(m['tasks']) for m in milestones)} tasks")
         return milestones
 
-    except json.JSONDecodeError:
-        logger.error("Failed to parse LLM response for task breakdown")
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse LLM response: {str(e)}", exc_info=True)
         return []
-
     except Exception as e:
-        logger.error(f"Error generating task breakdown: {str(e)}")
+        logger.error(f"Error generating task breakdown: {str(e)}", exc_info=True)
         return []
