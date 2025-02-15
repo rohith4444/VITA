@@ -53,10 +53,8 @@ body {
 .container {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 70px 1fr 1fr;
-  gap: 10px 10px;
+  /* grid-template-rows: 70px 1fr 100px; */
 }
-
 
 .v1 {
   font-size: large;
@@ -68,4 +66,15 @@ body {
   font-size: large;
   font-weight: 700;
   color: var(--text-primary-light);
+}
+
+.bv1 {
+  border-radius: 2rem;
+  padding: 1rem;
+  border-width: 10px;
+}
+
+.bv4 {
+  width: 100%;
+  margin-left: 0px;
 }
