@@ -145,6 +145,68 @@ class Config:
             self.logger.error(f"Configuration validation failed: {str(e)}", exc_info=True)
             raise
 
+    # LangSmith Configuration
+    @property
+    def LANGSMITH_API_KEY(self) -> str:
+        api_key = os.getenv("LANGSMITH_API_KEY")
+        if not api_key:
+            self.logger.error("LANGSMITH_API_KEY not found in environment")
+            raise ValueError("LANGSMITH_API_KEY is required")
+        return api_key
+
+    @property
+    def LANGCHAIN_PROJECT(self) -> str:
+        project = os.getenv("LANGCHAIN_PROJECT", "vita-development")
+        self.logger.debug(f"Using LangChain project: {project}")
+        return project
+
+    @property
+    def LANGCHAIN_TRACING_V2(self) -> bool:
+        return os.getenv("LANGCHAIN_TRACING_V2", "true").lower() == "true"
+
+    @property
+    def LANGCHAIN_ENDPOINT(self) -> Optional[str]:
+        endpoint = os.getenv("LANGCHAIN_ENDPOINT")
+        if endpoint:
+            self.logger.debug(f"Using custom LangChain endpoint: {endpoint}")
+        return endpoint
+
+    @property
+    def MONITORING_ENABLED(self) -> bool:
+        return os.getenv("MONITORING_ENABLED", "true").lower() == "true"
+
+    # Update the validate_config method to include LangSmith validation:
+    def validate_config(self) -> bool:
+        """
+        Validates all configuration settings.
+        
+        Returns:
+            bool: True if all settings are valid
+            
+        Raises:
+            ValueError: If any required configuration is missing
+        """
+        try:
+            self.logger.info("Validating configuration")
+            
+            # Validate OpenAI configuration
+            _ = self.OPENAI_API_KEY
+            
+            # Validate database configuration
+            _ = self.database_url()
+            
+            # Validate LangSmith configuration if monitoring is enabled
+            if self.MONITORING_ENABLED:
+                _ = self.LANGSMITH_API_KEY
+                _ = self.LANGCHAIN_PROJECT
+                
+            self.logger.info("Configuration validation successful")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Configuration validation failed: {str(e)}", exc_info=True)
+            raise
+
 # Create singleton instance
 config = Config()
 try:
