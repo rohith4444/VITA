@@ -1,0 +1,4 @@
+export const lightThere = {
+    primaryColor: "#3B82F6",
+    backgroundColor: "#F8FAFD"
+}

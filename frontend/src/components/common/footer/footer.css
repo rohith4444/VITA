@@ -1,0 +1,22 @@
+.footer {
+    background-color: var(--bg-primary-light);
+    border-color: red;
+    border-top: 2px;
+}
+
+.topFooter {
+    display: flex;
+    flex-direction: row;
+    padding: 1rem 2rem;
+}
+
+.topLeftFooter {
+    display: flex;
+    flex: 1;
+}
+
+.topRightFooter {
+    display: flex;
+    flex: 1;
+    justify-content: flex-end;
+}

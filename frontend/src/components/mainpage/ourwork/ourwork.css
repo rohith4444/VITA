@@ -1,0 +1,56 @@
+/* OurWork.css */
+.our-work-container {
+    /* background-color: #F4F2EC; */
+    padding: 50px;
+}
+  
+  .our-work-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: black;
+    margin-bottom: 20px;
+    display: flex;
+    width: fit-content;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .our-work-cards {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .our-work-card {
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: left;
+    align-items: flex-start;
+  }
+  
+  .our-work-category {
+    font-size: 14px;
+    color: #555;
+    font-weight: 500;
+  }
+  
+  .our-work-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: black;
+    margin-top: 8px;
+    text-align: left;
+  }
+  
+  .our-work-date {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 12px;
+  }
+  
