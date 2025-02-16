@@ -5,10 +5,10 @@
     flex-direction: column;
     border-radius: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    padding: 24px;
+    padding: 1rem;
     max-width: 350px;
     text-align: left;
-    margin: 1rem;
+    /* margin: 1rem; */
   }
   
   .claude-title {

@@ -14,8 +14,7 @@ const WorkWithUs = () => {
                     team has experience across ML, physics, policy, and product. Together, we generate research 
                     and create reliable, beneficial AI systems.
                     </p>
-                    <CustomButton version='bv1' variant='outlined'>See open roles</CustomButton>
-                    <button className="work-button">See open roles</button>
+                    <CustomButton version='v2'>See open roles</CustomButton>
                 </div>
             </div>
         </>
