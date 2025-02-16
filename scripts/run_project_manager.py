@@ -1,106 +1,77 @@
-# scripts/run_project_manager.py
-
 import asyncio
-import sys
-import os
 from datetime import datetime
-from pathlib import Path
-
-# Add project root to Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
-
-from agents.project_manager.agent import ProjectManagerAgent
+from typing import Dict, Any
+import json
 from core.logging.logger import setup_logger
+from memory.memory_manager import MemoryManager
+from agents.core.project_manager.agent import ProjectManagerAgent
+from backend.config import Config
 
-async def handle_new_project(project_requirements):
-    # Create logger for this runner
-    logger = setup_logger("project_manager.runner")
-    logger.info("Starting new project setup")
+# Initialize logger
+logger = setup_logger("run_pm_agent")
+
+async def run_project_manager(project_description: str) -> Dict[str, Any]:
+    """
+    Run the Project Manager Agent with the given project description.
     
+    Args:
+        project_description: Project requirements/description
+        
+    Returns:
+        Dict[str, Any]: Final project plan
+    """
     try:
-        # 1. Create Project Manager Agent
-        pm_agent = ProjectManagerAgent("PM-001", "Project Manager")
-        logger.info("Project Manager Agent created")
+        # Initialize Memory Manager
+        memory_manager = await MemoryManager.create(Config.database_url())
+        logger.info("Memory Manager initialized")
 
-        # 2. Process project input
-        logger.info("Processing project input")
-        result = await pm_agent.process_input(project_requirements)
-        logger.info("Initial processing complete")
-
-        # 3. LLM analyzes requirements
-        logger.info("Starting requirements analysis")
-        analysis = await pm_agent._analyze_requirements(project_requirements)
-        logger.info("Requirements analysis complete")
-        if analysis.get('understood_requirements'):
-            logger.info(f"Key requirements: {analysis['understood_requirements'][:2]}")
-
-        # 4. Generate project plan
-        logger.info("Generating project plan")
-        plan = await pm_agent._generate_project_plan(analysis)
-        logger.info(f"Project plan generated with {len(plan.get('phases', []))} phases")
-
-        # 5. Break down tasks
-        logger.info("Breaking down tasks")
-        tasks = await pm_agent.task_service.generate_detailed_tasks(
-            plan.get("features", [])
+        # Initialize Project Manager Agent
+        agent_id = f"pm_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        pm_agent = ProjectManagerAgent(
+            agent_id=agent_id,
+            name="Project Manager",
+            memory_manager=memory_manager
         )
-        total_tasks = sum(len(phase['tasks']) for phase in tasks.values())
-        logger.info(f"Task breakdown complete with {total_tasks} total tasks")
+        logger.info(f"Project Manager Agent initialized with ID: {agent_id}")
 
-        # 6. Create timeline
-        logger.info("Creating project timeline")
-        timeline = await pm_agent.timeline_service.create_timeline(
-            tasks,
-            datetime.now()
+        # Run the agent
+        initial_state = {"input": project_description, "status": "initialized"}
+        logger.info("Starting Project Manager workflow")
+        
+        # Execute workflow
+        result = await pm_agent.run(initial_state)
+        
+        # Log intermediate states from memory
+        working_memory = await memory_manager.retrieve(
+            agent_id=agent_id,
+            memory_type="WORKING"
         )
-        duration = timeline['end_date'] - timeline['start_date']
-        logger.info(f"Timeline created. Project duration: {duration.days} days")
+        logger.debug(f"Working Memory State: {json.dumps(working_memory, indent=2)}")
 
-        # 7. Monitor and report
-        logger.info("Generating final progress and report")
-        progress = await pm_agent.monitor_progress()
-        report = await pm_agent.generate_report()
-        logger.info("Final report generation complete")
-
-        return {
-            "analysis": analysis,
-            "plan": plan,
-            "timeline": timeline,
-            "report": report
-        }
+        return result
 
     except Exception as e:
-        logger.error(f"Error during project setup: {str(e)}")
+        logger.error(f"Error running Project Manager: {str(e)}", exc_info=True)
         raise
 
 async def main():
-    logger = setup_logger("main")
-    
-    # Sample project requirements
-    requirements = {
-        "features": ["user_auth", "task_management"],
-        "timeline": "2 months",
-        "constraints": ["budget_limited"]
-    }
-
-    logger.info("=== Starting Project Manager Example ===")
-    logger.info(f"Project Features: {requirements['features']}")
-    logger.info(f"Timeline: {requirements['timeline']}")
-    logger.info(f"Constraints: {requirements['constraints']}")
+    # Example project description
+    project_description = """
+    Create a web application for task management with the following features:
+    - User authentication
+    - Task creation and assignment
+    - Project organization
+    - Progress tracking
+    - Team collaboration
+    """
 
     try:
-        result = await handle_new_project(requirements)
-        
-        logger.info("=== Project Summary ===")
-        logger.info(f"Start Date: {result['timeline']['start_date']}")
-        logger.info(f"End Date: {result['timeline']['end_date']}")
-        logger.info(f"Critical Path Tasks: {len(result['timeline']['critical_path'])}")
-        logger.info("Project setup completed successfully! ✨")
+        result = await run_project_manager(project_description)
+        print("\nFinal Project Plan:")
+        print(json.dumps(result, indent=2))
         
     except Exception as e:
-        logger.error(f"Project setup failed: {str(e)}")
-        sys.exit(1)
+        print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
     asyncio.run(main())

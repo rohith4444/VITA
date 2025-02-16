@@ -1,10 +1,11 @@
 from typing import Dict, Any
 from datetime import datetime
 from core.logging.logger import setup_logger
+from core.monitoring.decorators import monitor_operation
 from agents.core.base_agent import BaseAgent
 from agents.core.llm.service import LLMService
 from memory.memory_manager import MemoryManager
-from memory.base import MemoryType  # Added for memory type enum
+from memory.base import MemoryType
 from tools.project_manager.generate_task_breakdown import generate_task_breakdown
 from tools.project_manager.resource_allocator import allocate_resources
 from tools.project_manager.timeline_generator import estimate_time
@@ -24,7 +25,8 @@ class ProjectManagerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Failed to initialize ProjectManagerAgent: {str(e)}", exc_info=True)
             raise
-    
+
+    @monitor_operation(operation_type="graph_setup")
     def add_graph_nodes(self, graph: StateGraph) -> None:
         """Defines processing nodes for the Project Manager Agent."""
         self.logger.debug("Adding graph nodes to ProjectManagerAgent")
@@ -42,29 +44,42 @@ class ProjectManagerAgent(BaseAgent):
             self.logger.error(f"Failed to add graph nodes: {str(e)}", exc_info=True)
             raise
 
+    @monitor_operation(operation_type="receive_input", 
+                      metadata={"phase": "initialization"})
     async def receive_input(self, state: ProjectManagerGraphState) -> Dict[str, Any]:
-            """Handles project input processing."""
-            self.logger.info("Receiving project input")
-            try:
-                input_data = state["input"]
-                
-                # Store initial request in short-term memory
-                await self.memory_manager.store(
-                    agent_id=self.agent_id,
-                    memory_type=MemoryType.SHORT_TERM,
-                    content={
-                        "initial_request": input_data,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
-                )
-                
-                self.update_status("receiving_project_input")
-                return {"input": input_data, "status": "analyzing_requirements"}
-            except Exception as e:
-                self.logger.error(f"Error processing input: {str(e)}", exc_info=True)
-                raise
+        """Handles project input processing."""
+        self.logger.info("Receiving project input")
+        try:
+            input_data = state["input"]
+            
+            # Store initial request in short-term memory
+            await self.memory_manager.store(
+                agent_id=self.agent_id,
+                memory_type=MemoryType.SHORT_TERM,
+                content={
+                    "initial_request": input_data,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            )
+            
+            self.update_status("receiving_project_input")
+            return {"input": input_data, "status": "analyzing_requirements"}
+        except Exception as e:
+            self.logger.error(f"Error processing input: {str(e)}", exc_info=True)
+            raise
 
-
+    @monitor_operation(
+        operation_type="analyze_requirements",
+        metadata={
+            "phase": "analysis",
+            "memory_operations": {
+                "working_memory": "read_write",
+                "long_term_memory": "write",
+            },
+            "tools_used": [],
+            "expected_outputs": ["structured_requirements", "features_list"]
+        }
+    )
     async def analyze_requirements(self, state: ProjectManagerGraphState) -> Dict[str, Any]:
         """Analyzes and structures project requirements."""
         self.logger.info("Analyzing project requirements")
@@ -117,6 +132,27 @@ class ProjectManagerAgent(BaseAgent):
             self.logger.error(f"Error analyzing requirements: {str(e)}", exc_info=True)
             raise
 
+    @monitor_operation(
+        operation_type="generate_project_plan",
+        metadata={
+            "phase": "planning",
+            "memory_operations": {
+                "long_term_memory": "read_write",
+                "working_memory": "write"
+            },
+            "tools_used": [
+                "task_breakdown_generator",
+                "resource_allocator",
+                "timeline_estimator"
+            ],
+            "tool_configurations": {
+                "reference_plans_enabled": True,
+                "resource_allocation_mode": "skill_based",
+                "timeline_estimation_type": "effort_based"
+            },
+            "expected_outputs": ["milestones", "resource_plan", "timeline_options"]
+        }
+    )
     async def generate_project_plan(self, state: ProjectManagerGraphState) -> Dict[str, Any]:
         """Generates a structured project plan."""
         self.logger.info("Generating project plan")
@@ -141,7 +177,7 @@ class ProjectManagerAgent(BaseAgent):
             
             # Generate new plan
             milestones = await generate_task_breakdown(
-                requirements, 
+                requirements,
                 self.llm_service,
                 reference_plans=reference_plans
             )

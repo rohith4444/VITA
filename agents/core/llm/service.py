@@ -3,6 +3,7 @@ import json
 import openai
 from backend.config import Config
 from core.logging.logger import setup_logger
+from core.monitoring.decorators import monitor_llm, monitor_operation
 from .prompts import format_requirement_analysis_prompt, format_project_plan_prompt
 
 class LLMService:
@@ -25,7 +26,28 @@ class LLMService:
         except Exception as e:
             self.logger.error(f"Failed to initialize LLM Service: {str(e)}", exc_info=True)
             raise
-        
+
+    @monitor_llm(
+        run_name="analyze_requirements",
+        metadata={
+            "operation_details": {
+                "prompt_template": "requirement_analysis",
+                "max_tokens": 1500,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            },
+            "context_size": {
+                "input_size": "dynamic",
+                "expected_output_size": "medium"
+            },
+            "processing_steps": [
+                "prompt_formatting",
+                "llm_call",
+                "response_parsing",
+                "validation"
+            ]
+        }
+    )
     async def analyze_requirements(self, project_description: str) -> Dict[str, Any]:
         """
         Analyze and restructure user requirements using LLM.
@@ -79,6 +101,32 @@ class LLMService:
             self.logger.error(f"Unexpected error in requirement analysis: {str(e)}", exc_info=True)
             raise
     
+    @monitor_llm(
+        run_name="generate_project_plan",
+        metadata={
+            "operation_details": {
+                "prompt_template": "project_plan",
+                "max_tokens": 2000,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            },
+            "context_size": {
+                "input_size": "dynamic",
+                "expected_output_size": "large"
+            },
+            "processing_steps": [
+                "prompt_formatting",
+                "llm_call",
+                "response_parsing",
+                "plan_structuring"
+            ],
+            "validation_rules": [
+                "milestone_structure",
+                "task_dependencies",
+                "effort_estimates"
+            ]
+        }
+    )
     async def generate_project_plan(self, problem_statement: str, features: List[str]) -> Dict[str, Any]:
         """
         Generate a structured project plan using LLM.
@@ -130,6 +178,7 @@ class LLMService:
             self.logger.error(f"Unexpected error in project plan generation: {str(e)}", exc_info=True)
             raise
 
+    @monitor_operation(operation_type="llm_response_parsing")
     def _parse_llm_response(self, response: str) -> Dict[str, Any]:
         """
         Parse the LLM response into a structured format.
