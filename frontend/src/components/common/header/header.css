@@ -1,13 +1,15 @@
-header {
+.header {
     background-color: var(--bg-navbar-light);
-    height: 100%;
     padding: 0px 90px;
     top: 0;
+    width: calc(100% - 180px);
+    position: fixed;
     z-index: 999;
-    display: flex
+    display: flex;
+    justify-content: space-between;
 }
 
-header h4 {
+.header h4 {
     font-size: 40px;
     font-weight: 300;
     margin: 0px;
@@ -31,4 +33,35 @@ header h4 {
     flex: 1;
     justify-content: right;
     align-items: center;
+}
+
+.menuDropdown {
+    display: none;
+}
+
+.navBarMenu {
+    display: none;
+    flex: 1;
+    justify-content: right;
+    align-items: center;
+}
+
+@media (max-width: 1000px) {
+    .header h4 {
+        display: none;
+    }
+
+    .navBar {
+        display: none;
+    }
+
+    .navBarMenu {
+        display: flex;
+    }
+
+    .menuDropdown {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
 }

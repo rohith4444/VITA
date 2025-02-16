@@ -12,7 +12,7 @@ const Footer = () => {
         <div class="item footer">
             <div class="topFooter">
                 <div className="topleftFooter">
-                    <Stack spacing={5} direction="row" sx={{alignItems: "center"}}>
+                    <Stack spacing={{ xs: 1, sm: 1, md: 5 }} direction={{ xs: 'column', sm: 'column', md: 'row' }} sx={{alignItems: "center"}}>
                         <CustomLink href="#" version="v2" underline="hover">About Aether AI</CustomLink>
                         <CustomLink href="#" version="v2" underline="hover">Contact Us</CustomLink>
                         <CustomLink href="#" version="v2" underline="hover">Careers</CustomLink>
@@ -20,7 +20,7 @@ const Footer = () => {
                     </Stack>
                 </div>
                 <div className="topRightFooter">
-                    <Stack spacing={1} direction="row" sx={{alignItems: "center"}}>
+                    <Stack spacing={1} direction='row' sx={{alignItems: "center"}}>
                         <CustomLink href="#" version="v2" underline="hover"><FacebookIcon /></CustomLink>
                         <CustomLink href="#" version="v2" underline="hover"><InstagramIcon /></CustomLink>
                         <CustomLink href="#" version="v2" underline="hover"><LinkedInIcon /></CustomLink>

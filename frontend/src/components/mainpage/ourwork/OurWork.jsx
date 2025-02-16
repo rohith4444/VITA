@@ -22,7 +22,9 @@ const workItems = [
 const OurWork = () => {
   return (
     <div className="our-work-container">
-      <h2 className="our-work-title">Our Work</h2>
+      <div className="our-work-header">
+        <h2 className="our-work-title">Our Work</h2>
+      </div>
       <div className="our-work-cards">
         {workItems.map((item, index) => (
           <div key={index} className="our-work-card">

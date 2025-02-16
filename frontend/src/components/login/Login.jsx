@@ -23,11 +23,11 @@ const Login = () => {
             </p>
           </div>
 
-          <p className="learn-more">Learn more ↓</p>
+          {/* <p className="learn-more">Learn more ↓</p> */}
         </div>
 
         {/* Right Section */}
-        <div className="right-section">
+        {/* <div className="right-section">
           <div className="chat-bubble">
             <img
               src="https://via.placeholder.com/24" 
@@ -36,7 +36,7 @@ const Login = () => {
             />
             Claude, create a report to analyze product usage and user feedback.
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
