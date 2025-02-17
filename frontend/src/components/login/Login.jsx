@@ -1,44 +1,66 @@
-import React from "react";
+import React, { useState } from "react";
 import "./login.css";
+import CustomButton from "../common/button/CustomButton";
+import TextInput from "../common/textinput/TextInput";
+import Header from "../common/header/Header";
+import Footer from "../common/footer/Footer";
 
 const Login = () => {
+
+  const [login, setLogin] = useState(true);
+
   return (
-    <div className="landing-container">
-      <div className="landing-content">
-        {/* Left Section */}
-        <div className="left-section">
-          {/* <div className="logo">✷ Claude</div> */}
-          <h1 className="tagline">Your ideas, amplified</h1>
-          <p className="subtext">Privacy-first AI that helps you create in confidence.</p>
-          
-          <div className="login-box">
-            <button className="google-login">
-              <span style={{ marginRight: 8 }}>🔵</span> Continue with Google
-            </button>
-            <p className="or-text">OR</p>
-            <input type="email" placeholder="Enter your personal or work email" className="email-input" />
-            <button className="email-login">Continue with email</button>
-            <p className="terms-text">
-              By continuing, you agree to Anthropic’s <a href="#">Consumer Terms</a> and <a href="#">Privacy Policy</a>.
-            </p>
+    <>
+      <Header />
+      <div className="landing-container">
+        <div className="login-card">
+          <div className="login-register-buttons">
+            <CustomButton version="v2" width='calc(50% - 20px)' margin="10px" onClick={() => setLogin(true)}>Login</CustomButton>
+            <CustomButton version="v2" width='calc(50% - 20px)' margin="10px"onClick={() => setLogin(false)}>Register</CustomButton>
           </div>
-
-          {/* <p className="learn-more">Learn more ↓</p> */}
+          {login ? <>
+              <div className="text">
+                <p>Sign in with: </p>
+                <p>or: </p>
+              </div>
+              <div className="login-form-field">
+                <TextInput label="Enter email or username" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field">
+                <TextInput label="Enter password" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field forgot-password">
+                <p>Forgot password?</p>
+              </div>
+              <div className="login-form-field">
+                <CustomButton version="v1" width="50%">Login</CustomButton>
+              </div>
+            </> : 
+            <>
+              <div className="login-form-field">
+                <TextInput label="Enter first name" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field">
+                <TextInput label="Enter last name" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field">
+                <TextInput label="Enter email" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field">
+                <TextInput label="Enter password" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field">
+                <TextInput label="Re-Enter password" id="outlined-size-small" size="small" className="login-form-field" />
+              </div>
+              <div className="login-form-field">
+                <CustomButton version="v1" width="50%">Register</CustomButton>
+              </div>
+            </>
+          }
         </div>
-
-        {/* Right Section */}
-        {/* <div className="right-section">
-          <div className="chat-bubble">
-            <img
-              src="https://via.placeholder.com/24" 
-              alt="User Avatar"
-              style={{ borderRadius: "50%", marginRight: "8px" }}
-            />
-            Claude, create a report to analyze product usage and user feedback.
-          </div>
-        </div> */}
       </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 
