@@ -13,6 +13,7 @@ const ButtonV2 = styled.button`
     border-radius: 8px;
     cursor: pointer;
     width: ${props => props.width ? props.width : 'auto'};
+    margin: ${props => props.margin ? props.margin: '0px'};
     transition: all 0.3s ease-in-out;
     &:hover {
         background-color: black;
@@ -31,6 +32,7 @@ const ButtonV1 = styled.button`
     cursor: pointer;
     transition: all 0.3s ease-in-out;
     width: ${props => props.width ? props.width : 'auto'};
+    margin: ${props => props.margin ? props.margin: '0px'};
 `
 
 export default function CustomButton({ version, ...props }) {

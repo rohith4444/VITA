@@ -4,10 +4,13 @@ import CustomButton from '../common/button/CustomButton';
 import GridLayout from '../common/gridlayout/GridLayout';
 import WorkWithUs from './workwithus/WorkWithUs';
 import OurWork from './ourwork/OurWork';
+import Header from '../common/header/Header';
+import Footer from '../common/footer/Footer';
 
 const Main = () => {
     return (
         <>
+            <Header />
             <div class="item mainblock">
                 <div class="mainblockTopLeft">
                     <div class="mainblockTopLeftTop">
@@ -24,6 +27,7 @@ const Main = () => {
             </div>
             <OurWork />
             <WorkWithUs />
+            <Footer />
         </>
     );
 }

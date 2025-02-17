@@ -52,7 +52,7 @@ export default function Header() {
         <div class="header">
             <div class="icon">
                 <Logo width={50} height={70} strokeWidth={15} />
-                <h4>Aether AI</h4>
+                <h4>AETHER AI</h4>
             </div>
             <div class="navBar">
                 <Stack spacing={3} direction="row" sx={{alignItems: "center"}}>
@@ -66,9 +66,8 @@ export default function Header() {
                         open={open}
                         onClose={handleClose}
                     >
-                        <MenuItem onClick={handleClose}>Option 1</MenuItem>
-                        <MenuItem onClick={handleClose}>Option 2</MenuItem>
-                        <MenuItem onClick={handleClose}>Option 3</MenuItem>
+                        <MenuItem onClick={handleClose}>Overview</MenuItem>
+                        <MenuItem onClick={handleClose}>Agents</MenuItem>
                     </Menu>
                     <CustomLink href="#" version="v1" underline="hover">Research</CustomLink>
                     <CustomLink href="#" version="v1" underline="hover">Company</CustomLink>
@@ -97,9 +96,8 @@ export default function Header() {
                             open={open}
                             onClose={handleClose}
                         >
-                            <MenuItem onClick={handleClose}>Option 1</MenuItem>
-                            <MenuItem onClick={handleClose}>Option 2</MenuItem>
-                            <MenuItem onClick={handleClose}>Option 3</MenuItem>
+                            <MenuItem onClick={handleClose}>Overview</MenuItem>
+                            <MenuItem onClick={handleClose}>Agents</MenuItem>
                         </Menu>
                         <CustomLink href="#" version="v1" underline="hover">Research</CustomLink>
                         <CustomLink href="#" version="v1" underline="hover">Company</CustomLink>
