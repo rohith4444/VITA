@@ -1,11 +1,11 @@
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from core.logging.logger import setup_logger
-from .base import MemoryType, MemoryEntry
+from .base import MemoryType, MemoryEntry, CleanableResource
 from .short_term.in_memory import ShortTermMemory
 from .working.working_memory import WorkingMemory
 from .long_term.persistent import LongTermMemory
-from backend.config import Config
+from backend.config import config
 
 # Initialize module logger
 logger = setup_logger("memory.manager")
@@ -63,7 +63,7 @@ class MemoryManager:
             working = WorkingMemory()
             logger.debug("Working memory initialized")
             
-            long_term = await LongTermMemory.create(Config.database_url())
+            long_term = await LongTermMemory.create(config.database_url())
             logger.debug("Long-term memory initialized")
             
             logger.info("Successfully created Memory Manager with all subsystems")
@@ -167,7 +167,7 @@ class MemoryManager:
         Raises:
             ValueError: If parameters are invalid
         """
-        self.logger.info(f"Retrieving memories for agent {agent_id} from {memory_type.value}")
+        #self.logger.info(f"Retrieving memories for agent {agent_id} from {memory_type.value}")
         
         # Validate inputs
         if not agent_id or not agent_id.strip():
@@ -185,6 +185,15 @@ class MemoryManager:
         
         try:
             self.logger.debug(f"Retrieving with query: {query}")
+
+            if isinstance(memory_type, str):
+                try:
+                    memory_type = MemoryType[memory_type.upper()]  # Convert from string to Enum
+                except KeyError:
+                    self.logger.error(f"Invalid memory type: {memory_type}")
+                    return []
+
+            self.logger.info(f"Retrieving memories for agent {agent_id} from {memory_type.value}")
             
             if memory_type == MemoryType.SHORT_TERM:
                 results = await self.short_term.retrieve(agent_id, query)
@@ -264,3 +273,24 @@ class MemoryManager:
         except Exception as e:
             self.logger.error(f"Error during memory consolidation: {str(e)}", exc_info=True)
             return False
+        
+    async def cleanup(self) -> None:
+        """Cleanup memory systems before shutdown."""
+        self.logger.info("Starting memory cleanup")
+        try:
+            # Cleanup cleanable resources
+            cleanable_resources = [
+                memory for memory in [self.short_term, self.working]
+                if isinstance(memory, CleanableResource)
+            ]
+            
+            for resource in cleanable_resources:
+                try:
+                    await resource.cleanup()
+                except Exception as e:
+                    self.logger.error(f"Error cleaning up {resource.__class__.__name__}: {str(e)}")
+            
+            self.logger.info("Memory cleanup completed successfully")
+        except Exception as e:
+            self.logger.error(f"Error during memory cleanup: {str(e)}", exc_info=True)
+            raise

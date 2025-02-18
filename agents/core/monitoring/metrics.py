@@ -14,6 +14,7 @@ class MetricType(Enum):
     AGENT_OPERATION = "agent_operation"
     MEMORY_OPERATION = "memory_operation"
     TOOL_EXECUTION = "tool_execution"
+    OPERATION_REQUEST = "operation_request"
 
 class LLMMetrics(BaseModel):
     """Metrics specific to LLM operations."""

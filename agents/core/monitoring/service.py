@@ -1,7 +1,8 @@
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-import langsmith
-from langchain.callbacks.tracers.langsmith import LangSmithTracer
+import uuid
+from langsmith import Client
+from langchain_core.tracers.langchain import LangChainTracer
 from core.logging.logger import setup_logger
 from backend.config import config
 from .metrics import MetricsManager, LLMMetrics, OperationMetrics, MetricType
@@ -20,19 +21,28 @@ class MonitoringService:
             self.metrics_manager = MetricsManager()
             
             # Initialize LangSmith if monitoring is enabled
+            self.client = None
+            self.langsmith_client = None
+            self.tracer = None
+
             if config.MONITORING_ENABLED:
-                self.client = langsmith.Client(
+                # Initialize LangSmith Client
+                self.client = Client(
                     api_key=config.LANGSMITH_API_KEY,
                     api_url=config.LANGCHAIN_ENDPOINT
                 )
-                self.tracer = LangSmithTracer(
+                
+                # Set langsmith_client explicitly
+                self.langsmith_client = self.client
+                
+                # Initialize tracer
+                self.tracer = LangChainTracer(
                     project_name=config.LANGCHAIN_PROJECT,
                     client=self.client
                 )
+                
                 self.logger.info(f"LangSmith initialized for project: {config.LANGCHAIN_PROJECT}")
             else:
-                self.client = None
-                self.tracer = None
                 self.logger.info("Monitoring is disabled")
             
             # Initialize metric storage
@@ -66,13 +76,31 @@ class MonitoringService:
                 "metrics": []
             }
             
-            if self.tracer:
-                await self.tracer.astart_trace(
-                    run_id=run_id,
-                    run_type="chain",
-                    run_name=run_name,
-                    extra=metadata
-                )
+            # Fallback to manual run creation if client method fails
+            langsmith_run_id = None
+            
+            if self.langsmith_client is not None:
+                try:
+                    # Attempt to create run with more explicit parameters
+                    run = self.langsmith_client.create_run(
+                        name=run_name,
+                        run_type="chain",
+                        inputs={},  # You can pass initial inputs if needed
+                        extra_metadata=metadata or {},
+                        start_time=timestamp
+                    )
+                    
+                    # Safely get run ID
+                    langsmith_run_id = getattr(run, 'id', str(uuid.uuid4()))
+                except Exception as e:
+                    # Log the error but don't stop the entire process
+                    self.logger.warning(f"Failed to create LangSmith run: {str(e)}")
+                    # Generate a fallback UUID
+                    langsmith_run_id = str(uuid.uuid4())
+            
+            # Only add langsmith_run_id if it exists
+            if langsmith_run_id:
+                self._current_run['langsmith_run_id'] = langsmith_run_id
             
             self.logger.info(f"Started monitoring run: {run_id}")
             return run_id
@@ -106,12 +134,21 @@ class MonitoringService:
             
             self._metrics_history.append(run_data)
             
-            if self.tracer:
-                await self.tracer.aend_trace(
-                    run_id=run_id,
-                    extra=metadata
-                )
-            
+            if self.langsmith_client and 'langsmith_run_id' in self._current_run:
+                try:
+                    # Use a more defensive update approach
+                    self.langsmith_client.update_run(
+                        run_id=self._current_run['langsmith_run_id'],
+                        status="success",  # or "error" if there were issues
+                        outputs={},  # You can pass final outputs if needed
+                        extra_metadata=metadata or {}
+                    )
+                except Exception as update_error:
+                    # Log the error but don't stop the entire process
+                    self.logger.warning(
+                        f"Failed to update LangSmith run {self._current_run['langsmith_run_id']}: "
+                        f"{str(update_error)}")
+                    
             self._current_run = None
             self.logger.info(f"Ended monitoring run: {run_id}")
             
@@ -131,15 +168,6 @@ class MonitoringService:
     ) -> None:
         """
         Log metrics for an LLM operation.
-        
-        Args:
-            run_id: Current run ID
-            model: Name of the LLM model used
-            input_tokens: Number of input tokens
-            output_tokens: Number of output tokens
-            duration_ms: Operation duration in milliseconds
-            success: Whether the operation succeeded
-            metadata: Optional additional metadata
         """
         try:
             # Calculate cost
@@ -156,24 +184,48 @@ class MonitoringService:
                 metadata=metadata
             )
             
-            # Add to current run
-            if self._current_run and self._current_run["run_id"] == run_id:
-                self._current_run["metrics"].append({
-                    "type": MetricType.LLM_REQUEST.value,
-                    "timestamp": datetime.utcnow(),
-                    "data": metrics.dict()
-                })
-            
-            # Log to LangSmith if enabled
-            if self.tracer:
-                await self.tracer.alog_metrics(
-                    metrics={
-                        "tokens": input_tokens + output_tokens,
-                        "cost": cost,
-                        "duration_ms": duration_ms,
-                        "success": success
-                    },
-                    run_id=run_id
+            # Safely handle current run
+            if self._current_run is not None:
+                # Add to current run if run_id matches
+                if self._current_run.get("run_id") == run_id:
+                    self._current_run.setdefault("metrics", []).append({
+                        "type": MetricType.LLM_REQUEST.value,
+                        "timestamp": datetime.utcnow(),
+                        "data": metrics.dict()
+                    })
+                
+                # Log to LangSmith if enabled
+                if (self.langsmith_client and 
+                    isinstance(self._current_run, dict) and 
+                    'langsmith_run_id' in self._current_run):
+                    try:
+                        self.langsmith_client.update_run(
+                            run_id=self._current_run['langsmith_run_id'],
+                            extra_metadata={
+                                "llm_metrics": {
+                                    "model": model,
+                                    "tokens": {
+                                        "input": input_tokens,
+                                        "output": output_tokens,
+                                        "total": input_tokens + output_tokens
+                                    },
+                                    "cost": cost,
+                                    "duration_ms": duration_ms,
+                                    "success": success,
+                                    "additional_metadata": metadata or {}
+                                }
+                            }
+                        )
+                    except Exception as update_error:
+                        self.logger.warning(
+                            f"Failed to update LangSmith run with LLM metrics: "
+                            f"{str(update_error)}"
+                        )
+            else:
+                # If no current run, create a new run or log a warning
+                self.logger.warning(
+                    f"No active run found for logging LLM metrics. "
+                    f"Run ID: {run_id}, Model: {model}"
                 )
             
             self.logger.debug(
@@ -183,7 +235,8 @@ class MonitoringService:
             
         except Exception as e:
             self.logger.error(f"Error logging LLM metrics: {str(e)}", exc_info=True)
-            raise
+            # Optionally, you can add a fallback mechanism or re-raise
+            # raise
 
     async def log_operation_metrics(
         self,
@@ -195,6 +248,9 @@ class MonitoringService:
     ) -> None:
         """Enhanced operation metrics logging."""
         try:
+            # Safely handle metadata
+            metadata = metadata or {}
+
             # Enhance metadata with operation context
             enhanced_metadata = {
                 "operation_context": {
@@ -204,36 +260,63 @@ class MonitoringService:
                     "success": success
                 },
                 "memory_stats": {
-                    "working_memory_size": await self._get_memory_size("working"),
-                    "long_term_memory_size": await self._get_memory_size("long_term")
+                    # Replace with default values or remove if not needed
+                    "working_memory_size": metadata.get("working_memory_size", 0),
+                    "long_term_memory_size": metadata.get("long_term_memory_size", 0)
                 },
                 "tool_usage": {
                     "tools_invoked": metadata.get("tools_used", []),
                     "tool_configs": metadata.get("tool_configurations", {})
                 },
-                "operation_details": metadata or {}
+                "operation_details": metadata
             }
 
-            if self.tracer:
-                await self.tracer.alog_metrics(
-                    metrics={
-                        "operation_type": operation_type,
-                        "duration_ms": duration_ms,
-                        "success": success,
-                        "enhanced_metrics": enhanced_metadata
-                    },
-                    run_id=run_id
+            # Safely handle current run
+            if self._current_run is not None:
+                # Check if run_id matches current run
+                if self._current_run.get("run_id") == run_id:
+                    # Add metrics to current run
+                    self._current_run.setdefault("metrics", []).append({
+                        "type": MetricType.OPERATION_REQUEST.value,  # Assuming you have this enum
+                        "timestamp": datetime.utcnow(),
+                        "data": enhanced_metadata
+                    })
+
+                # Log to LangSmith if enabled
+                if (self.langsmith_client and 
+                    isinstance(self._current_run, dict) and 
+                    'langsmith_run_id' in self._current_run):
+                    try:
+                        self.langsmith_client.update_run(
+                            run_id=self._current_run['langsmith_run_id'],
+                            extra_metadata={
+                                "operation_metrics": enhanced_metadata
+                            }
+                        )
+                    except Exception as update_error:
+                        self.logger.warning(
+                            f"Failed to update LangSmith run with operation metrics: "
+                            f"{str(update_error)}"
+                        )
+            else:
+                # If no current run, log a warning
+                self.logger.warning(
+                    f"No active run found for logging operation metrics. "
+                    f"Run ID: {run_id}, Operation: {operation_type}"
                 )
             
             self.logger.debug(
                 f"Logged enhanced operation metrics for run {run_id}: "
                 f"{operation_type}, {duration_ms}ms"
             )
-            
+                
         except Exception as e:
-            self.logger.error(f"Error logging enhanced operation metrics: {str(e)}", exc_info=True)
-            raise
-
+            self.logger.error(
+                f"Error logging enhanced operation metrics: {str(e)}", 
+                exc_info=True
+            )
+            # Optionally, you can add a fallback mechanism or re-raise
+            # raise
         
     def get_run_metrics(self, run_id: str) -> Optional[Dict[str, Any]]:
         """

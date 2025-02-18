@@ -292,3 +292,25 @@ class WorkingMemory(BaseMemory):
         except Exception as e:
             self.logger.error(f"Error checking inactivity: {str(e)}", exc_info=True)
             return False
+        
+    async def cleanup(self) -> None:
+        """Cleanup resources before shutdown."""
+        self.logger.info("Cleaning up Working Memory resources")
+        try:
+            async with self._lock:
+                # Clear all storage
+                self._storage.clear()
+                
+                # Clear metrics and tracking data
+                self._access_counts.clear()
+                self._last_access.clear()
+                
+                # Reset any other instance variables to initial state
+                self._storage = {}
+                self._access_counts = {}
+                self._last_access = {}
+                
+            self.logger.info("Working Memory cleanup completed successfully")
+        except Exception as e:
+            self.logger.error(f"Error during Working Memory cleanup: {str(e)}", exc_info=True)
+            raise

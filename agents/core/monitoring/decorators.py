@@ -12,7 +12,7 @@ R = TypeVar('R')
 # Initialize logger
 logger = setup_logger("monitoring.decorators")
 
-def monitor_llm(run_name: Optional[str] = None) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def monitor_llm( run_name: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator to monitor LLM operations.
     Tracks tokens, duration, and cost.

@@ -9,6 +9,14 @@ from core.logging.logger import setup_logger
 logger = setup_logger("memory.base")
 logger.info("Initializing memory base module")
 
+class CleanableResource(ABC):
+    """Interface for resources that need cleanup on shutdown."""
+    
+    @abstractmethod
+    async def cleanup(self) -> None:
+        """Cleanup resources before shutdown."""
+        pass
+    
 class MemoryType(Enum):
     """
     Types of memory available to agents.

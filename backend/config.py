@@ -112,12 +112,26 @@ class Config:
             ValueError: If any required database configuration is missing
         """
         try:
+            # Log individual components
+            self.logger.debug(f"Database connection parameters:")
+            self.logger.debug(f"  Host: {self.POSTGRES_HOST}")
+            self.logger.debug(f"  Port: {self.POSTGRES_PORT}")
+            self.logger.debug(f"  Database: {self.POSTGRES_DB}")
+            self.logger.debug(f"  User: {self.POSTGRES_USER}")
+            self.logger.debug(f"  Password length: {len(self.POSTGRES_PASSWORD)} chars")  # Don't log actual password
+            
             url = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
             self.logger.debug("Generated database URL successfully")
+            
+            # Log the URL with password masked
+            masked_url = url.replace(self.POSTGRES_PASSWORD, "****")
+            self.logger.debug(f"Database URL: {masked_url}")
+            
             return url
         except Exception as e:
             self.logger.error(f"Failed to generate database URL: {str(e)}", exc_info=True)
             raise
+
 
     def validate_config(self) -> bool:
         """

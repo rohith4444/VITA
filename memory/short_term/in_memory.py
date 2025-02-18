@@ -307,3 +307,14 @@ class ShortTermMemory(BaseMemory):
                 await self._cleanup_task
             except asyncio.CancelledError:
                 pass
+
+    async def cleanup(self) -> None:
+        """Cleanup resources before shutdown."""
+        self.logger.info("Cleaning up Short-Term Memory resources")
+        if self._cleanup_task and not self._cleanup_task.cancelled():
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+        self.logger.info("Short-Term Memory cleanup completed")
