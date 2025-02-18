@@ -9,6 +9,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { Menu, MenuItem } from "@mui/material";
 import { AppBar, Toolbar, Button, Typography } from "@mui/material";
 import { ArrowRight, Menu as MenuIcon } from "@mui/icons-material";
+import { Route, useNavigate } from "react-router-dom";
 
 export default function Header() {
 
@@ -17,6 +18,8 @@ export default function Header() {
     const [anchorEl1, setAnchorEl1] = useState(null);
   const [nestedAnchorEl, setNestedAnchorEl] = useState(null);
   const [moreNestedAnchorEl, setMoreNestedAnchorEl] = useState(null);
+
+  const navigate = useNavigate();
 
   // Handle main menu open/close
   const handleMenuOpen = (event) => {
@@ -47,6 +50,7 @@ export default function Header() {
       const handleClose = () => {
         setAnchorEl(null);
         setOpen(false);
+        navigate('/vitahomepage');
       };
     return (
         <div class="header">
@@ -72,7 +76,7 @@ export default function Header() {
                     <CustomLink href="#" version="v1" underline="hover">Research</CustomLink>
                     <CustomLink href="#" version="v1" underline="hover">Company</CustomLink>
                     <CustomLink href="#" version="v1" underline="hover">News</CustomLink>
-                    <CustomButton version="v1">Try Vita</CustomButton>
+                    <CustomButton version="v1" onClick={() => navigate("/login")}>Try Vita</CustomButton>
                 </Stack>
             </div>
             <div class="navBarMenu">
@@ -102,7 +106,7 @@ export default function Header() {
                         <CustomLink href="#" version="v1" underline="hover">Research</CustomLink>
                         <CustomLink href="#" version="v1" underline="hover">Company</CustomLink>
                         <CustomLink href="#" version="v1" underline="hover">News</CustomLink>
-                        <CustomButton variant="contained" version="v1">Try Vita</CustomButton>
+                        <CustomButton variant="contained" version="v1" onClick={() => navigate("/login")}>Try Vita</CustomButton>
                     </Stack>
                 </Menu>
 

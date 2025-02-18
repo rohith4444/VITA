@@ -7,8 +7,6 @@
 
 .login-card {
   width: 50%;
-  /* background-color: var(--bg-primary-light); */
-  /* border: 1px solid gray; */
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   border-radius: 30px;
   padding: 2%;
@@ -41,4 +39,8 @@
 
 .forgot-password p {
   margin: 0px;
+}
+
+.tabs {
+  width: 100%;
 }
