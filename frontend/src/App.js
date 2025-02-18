@@ -1,9 +1,9 @@
 import './App.css';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Chat from './components/chat-interface/Chat';
 import Login from './components/login/Login';
 import Main from './components/mainpage/Main';
 import Homepage from './components/vita-homepage/Homepage';
+import VitaLoginPage from './components/vita-login-page/VitaLoginPage';
 
 function App() {
   return (
@@ -14,8 +14,8 @@ function App() {
             <Route path="/" element={<Main />}/ >
             {/* <Route index element={<Home />} /> */}
             <Route path="/login" element={<Login />} />
-            <Route path="/chat" element={<Chat />} />
             <Route path="/vitahomepage" element={<Homepage />} />
+            <Route path="/vitaloginpage" element={<VitaLoginPage />} />
           </Routes>
         </BrowserRouter>
       </div>
