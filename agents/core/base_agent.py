@@ -2,9 +2,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, Any
 from core.logging.logger import setup_logger
+from core.tracing.service import  trace_class
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
 
+@trace_class
 class BaseAgent(ABC):
     """Abstract base class for all agents."""
     

@@ -3,9 +3,11 @@ from typing import Dict, Any, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
 # Initialize logger
 logger = setup_logger("monitoring.metrics")
+
 
 class MetricType(Enum):
     """Types of metrics that can be collected."""
@@ -36,6 +38,8 @@ class OperationMetrics(BaseModel):
     success: bool
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+
+@trace_class
 class MetricsManager:
     """Manages metric collection and aggregation."""
     

@@ -4,7 +4,9 @@ import logging
 from typing import Dict, List, Any, Optional
 from ..base import BaseMemory, MemoryEntry, MemoryType
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
+@trace_class
 class LongTermMemory(BaseMemory):
     """
     Implementation of long-term memory using PostgreSQL for persistent storage.

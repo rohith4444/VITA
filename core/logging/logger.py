@@ -68,12 +68,12 @@ def setup_logger(
         logger.addHandler(file_handler)
 
     # Console handler
-    if console_output:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(
-            CustomFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        )
-        logger.addHandler(console_handler)
+    # if console_output:
+    #     console_handler = logging.StreamHandler(sys.stdout)
+    #     console_handler.setFormatter(
+    #         CustomFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    #     )
+    #     logger.addHandler(console_handler)
 
     return logger
 

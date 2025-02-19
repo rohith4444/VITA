@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, Optional, TypeVar, ParamSpec
 from datetime import datetime
 from core.logging.logger import setup_logger
 from .service import monitoring_service
+from core.tracing.service import trace_method
 
 # Type variables for generic function signatures
 P = ParamSpec('P')
@@ -12,6 +13,7 @@ R = TypeVar('R')
 # Initialize logger
 logger = setup_logger("monitoring.decorators")
 
+@trace_method
 def monitor_llm(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None):
     """
     Decorator to monitor LLM (Language Model) operations.
@@ -113,6 +115,8 @@ def monitor_llm(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any
         return wrapper
     return decorator
 
+
+@trace_method
 def monitor_operation(operation_type: str, metadata: Optional[Dict[str, Any]] = None):
     """
     Decorator to monitor general operations.

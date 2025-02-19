@@ -12,7 +12,9 @@ from .state_graph import ProjectManagerGraphState
 from tools.project_manager.generate_task_breakdown import generate_task_breakdown
 from tools.project_manager.resource_allocator import allocate_resources
 from tools.project_manager.timeline_generator import estimate_time
+from core.tracing.service import trace_class
 
+@trace_class
 class ProjectManagerAgent(BaseAgent):
     """Project Manager Agent responsible for project planning."""
     
@@ -109,7 +111,7 @@ class ProjectManagerAgent(BaseAgent):
                 content=memory_entry
             )
             
-            self.update_status("receiving_project_input")
+            await self.update_status("receiving_project_input")
             
             result = {"input": input_data, "status": "analyzing_requirements"}
             self.logger.debug(f"receive_input returning: {result}")

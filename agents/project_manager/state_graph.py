@@ -1,9 +1,12 @@
 from typing import TypedDict, List, Dict, Any
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
 # Initialize logger
 logger = setup_logger("project_manager.state_graph")
 
+
+@trace_class
 class ProjectManagerGraphState(TypedDict):
     """
     Defines the state structure for ProjectManager's workflow.

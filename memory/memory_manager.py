@@ -6,11 +6,12 @@ from .short_term.in_memory import ShortTermMemory
 from .working.working_memory import WorkingMemory
 from .long_term.persistent import LongTermMemory
 from backend.config import config
+from core.tracing.service import trace_class
 
-# Initialize module logger
-logger = setup_logger("memory.manager")
-logger.info("Initializing Memory Manager module")
+# Initialize module logger at the top level
+memory_logger = setup_logger("memory.manager")
 
+@trace_class
 class MemoryManager:
     """
     Manages and coordinates different types of memory systems for agents.
@@ -23,7 +24,6 @@ class MemoryManager:
                  working: WorkingMemory,
                  long_term: LongTermMemory):
         self.logger = setup_logger("memory.manager.instance")
-        self.logger.info("Initializing new Memory Manager instance")
         
         try:
             self.short_term = short_term
@@ -33,44 +33,34 @@ class MemoryManager:
         except Exception as e:
             self.logger.error(f"Failed to initialize Memory Manager: {str(e)}", exc_info=True)
             raise
-    
+
     @classmethod
     async def create(cls, db_url: str) -> 'MemoryManager':
         """
         Create a new MemoryManager instance with all memory systems.
-        
-        Args:
-            db_url: Database connection string for long-term memory
-            
-        Returns:
-            MemoryManager: Initialized memory manager instance
-            
-        Raises:
-            ValueError: If db_url is invalid
-            ConnectionError: If database connection fails
         """
-        logger.info("Creating new Memory Manager instance")
+        memory_logger.info("Creating new Memory Manager instance")
         
         if not db_url:
-            logger.error("Invalid database URL provided")
+            memory_logger.error("Invalid database URL provided")
             raise ValueError("Database URL cannot be empty")
             
         try:
             # Initialize memory systems
             short_term = ShortTermMemory()
-            logger.debug("Short-term memory initialized")
+            memory_logger.debug("Short-term memory initialized")
             
             working = WorkingMemory()
-            logger.debug("Working memory initialized")
+            memory_logger.debug("Working memory initialized")
             
             long_term = await LongTermMemory.create(config.database_url())
-            logger.debug("Long-term memory initialized")
+            memory_logger.debug("Long-term memory initialized")
             
-            logger.info("Successfully created Memory Manager with all subsystems")
+            memory_logger.info("Successfully created Memory Manager with all subsystems")
             return cls(short_term, working, long_term)
             
         except Exception as e:
-            logger.error(f"Failed to create Memory Manager: {str(e)}", exc_info=True)
+            memory_logger.error(f"Failed to create Memory Manager: {str(e)}", exc_info=True)
             raise
 
     async def store(self,

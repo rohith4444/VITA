@@ -1,10 +1,12 @@
 from typing import List
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_method
 
 # Initialize module logger
 logger = setup_logger("llm.prompts")
 logger.info("Initializing LLM prompts module")
 
+@trace_method
 def format_requirement_analysis_prompt(project_description: str) -> str:
     """
     Format the prompt for analyzing and restructuring user input.
@@ -43,6 +45,8 @@ def format_requirement_analysis_prompt(project_description: str) -> str:
         logger.error(f"Error formatting requirement analysis prompt: {str(e)}", exc_info=True)
         raise
 
+
+@trace_method
 def format_project_plan_prompt(problem_statement: str, features: List[str]) -> str:
     """
     Format the prompt for generating a milestone-based project plan.

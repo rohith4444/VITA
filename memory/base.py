@@ -4,11 +4,15 @@ from typing import Dict, Any, Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field, validator
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
+
+
 
 # Initialize module logger
 logger = setup_logger("memory.base")
 logger.info("Initializing memory base module")
 
+@trace_class
 class CleanableResource(ABC):
     """Interface for resources that need cleanup on shutdown."""
     
@@ -16,7 +20,8 @@ class CleanableResource(ABC):
     async def cleanup(self) -> None:
         """Cleanup resources before shutdown."""
         pass
-    
+
+@trace_class  
 class MemoryType(Enum):
     """
     Types of memory available to agents.
@@ -39,6 +44,7 @@ class MemoryType(Enum):
             logger.error(f"Invalid memory type: {value}")
             raise ValueError(f"Invalid memory type. Must be one of {[t.value for t in cls]}")
 
+@trace_class
 class MemoryEntry(BaseModel):
     """
     Base model for memory entries.
@@ -75,6 +81,8 @@ class MemoryEntry(BaseModel):
             raise ValueError("content cannot be empty")
         return v
 
+
+@trace_class
 class BaseMemory(ABC):
     """
     Abstract base class for memory implementations.

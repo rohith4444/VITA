@@ -4,9 +4,13 @@ from typing import Dict, Any, List, Optional
 from agents.core.llm.service import LLMService
 from agents.core.llm.prompts import format_project_plan_prompt
 from .task_estimator import estimate_task_complexity
+from core.tracing.service import trace_method
+
+
 
 logger = setup_logger("tools.project_manager.task_breakdown")
 
+@trace_method
 async def generate_task_breakdown(
     problem_statement: str, 
     features: List[str], 

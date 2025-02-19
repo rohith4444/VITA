@@ -4,7 +4,9 @@ from typing import Dict, List, Any, Optional
 from collections import defaultdict
 from ..base import BaseMemory, MemoryEntry, MemoryType
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
+@trace_class
 class ShortTermMemory(BaseMemory):
     """
     Implementation of short-term memory with automatic decay.

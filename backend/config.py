@@ -2,6 +2,8 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
+
 
 # Initialize logger
 logger = setup_logger("config")
@@ -16,11 +18,13 @@ else:
     logger.warning("Default .env file not found")
 
 # Load specific environment files if available
-ENV = os.getenv("ENV", "development")
+ENV = os.getenv("ENV", "base")
 logger.info(f"Current environment: {ENV}")
 
 try:
-    if ENV == "development":
+    if ENV == "base":  # Don't load any additional env files
+        pass
+    elif ENV == "development":
         env_path = os.path.join(os.path.dirname(__file__), ".env.development")
         if os.path.exists(env_path):
             load_dotenv(env_path, override=True)
@@ -41,6 +45,7 @@ except Exception as e:
     logger.error(f"Error loading environment variables: {str(e)}", exc_info=True)
     raise
 
+@trace_class
 class Config:
     """
     Configuration settings for the backend.

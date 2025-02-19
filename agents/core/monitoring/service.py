@@ -6,7 +6,9 @@ from langchain_core.tracers.langchain import LangChainTracer
 from core.logging.logger import setup_logger
 from backend.config import config
 from .metrics import MetricsManager, MetricType
+from core.tracing.service import trace_class
 
+@trace_class
 class MonitoringService:
     """
     Central monitoring service for tracking and recording metrics of AI operations.

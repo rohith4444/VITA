@@ -3,6 +3,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from ..base import BaseMemory, MemoryEntry, MemoryType
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
+
+@trace_class
 
 class WorkingMemory(BaseMemory):
     """

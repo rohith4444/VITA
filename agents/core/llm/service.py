@@ -3,9 +3,11 @@ import json
 from openai import AsyncOpenAI
 from backend.config import Config
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 from agents.core.monitoring.decorators import monitor_llm, monitor_operation
 from .prompts import format_requirement_analysis_prompt, format_project_plan_prompt
 
+@trace_class
 class LLMService:
     """Service for handling LLM interactions with OpenAI's GPT models."""
     
