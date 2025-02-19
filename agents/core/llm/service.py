@@ -66,7 +66,10 @@ class LLMService:
             self.logger.error(f"API key validation failed: {str(e)}")
             raise ValueError(f"Invalid OpenAI API key: {str(e)}")
 
-    @monitor_operation(operation_type="llm_response_parsing")
+    @monitor_operation(
+        operation_type="llm_response_parsing",
+        include_in_parent=True
+    )
     async def _parse_llm_response(self, response: str, expected_keys: Optional[list] = None) -> Dict[str, Any]:
         """
         Parse and validate the LLM response into a structured format.

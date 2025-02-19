@@ -121,16 +121,6 @@ class ProjectManagerAgent(BaseAgent):
             self.logger.error(f"Error in receive_input: {str(e)}", exc_info=True)
             raise
 
-    @monitor_operation(
-        operation_type="analyze_requirements",
-        metadata={
-            "phase": "analysis",
-            "memory_operations": {
-                "working_memory": "read_write",
-                "long_term_memory": "write",
-            }
-        }
-    )
     async def analyze_requirements(self, state: ProjectManagerGraphState) -> Dict[str, Any]:
         """Analyzes and structures project requirements."""
         self.logger.info("Starting analyze_requirements phase")
@@ -196,16 +186,6 @@ class ProjectManagerAgent(BaseAgent):
             self.logger.error(f"Error in analyze_requirements: {str(e)}", exc_info=True)
             raise
 
-    @monitor_operation(
-        operation_type="generate_project_plan",
-        metadata={
-            "phase": "planning",
-            "memory_operations": {
-                "long_term_memory": "read_write",
-                "working_memory": "write"
-            }
-        }
-    )
     async def generate_project_plan(self, state: ProjectManagerGraphState) -> Dict[str, Any]:
         """Generates a structured project plan."""
         self.logger.info("Starting generate_project_plan phase")

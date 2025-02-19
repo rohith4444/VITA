@@ -77,3 +77,20 @@ class BaseAgent(ABC):
     async def generate_report(self) -> Dict[str, Any]:
         """Generate a report of the agent's activities."""
         pass
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with cleanup."""
+        try:
+            # Cleanup monitoring
+            from agents.core.monitoring.service import monitoring_service
+            await monitoring_service.cleanup()
+            
+            # Cleanup memory
+            if hasattr(self, 'memory_manager'):
+                await self.memory_manager.cleanup()
+        except Exception as e:
+            self.logger.error(f"Error during agent cleanup: {str(e)}", exc_info=True)

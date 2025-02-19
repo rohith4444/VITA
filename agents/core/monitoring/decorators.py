@@ -1,7 +1,7 @@
 import time
 import functools
 from typing import Any, Callable, Dict, Optional, TypeVar, ParamSpec
-from datetime import datetime
+from datetime import datetime, UTC 
 from core.logging.logger import setup_logger
 from .service import monitoring_service
 from core.tracing.service import trace_method
@@ -37,8 +37,8 @@ def monitor_llm(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             start_time = time.time()
-            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-            current_run_name = f"{run_name or func.__name__}_{timestamp}"
+            timestamp =  datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
+            current_run_name = f"llm_{run_name}_{timestamp}"  # Add llm_ prefix
             run_id = None
             duration_ms = 0
             
@@ -46,6 +46,7 @@ def monitor_llm(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any
                 enhanced_metadata = {
                     "function": func.__name__,
                     "start_time": timestamp,
+                    "monitoring_type": "llm",  # Explicitly mark as LLM monitoring
                     **(metadata or {})
                 }
                 
@@ -71,6 +72,17 @@ def monitor_llm(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any
                         "execution_time": duration_ms
                     }
                 )
+
+                # Mark run as completed
+                await monitoring_service.end_run(
+                    run_id,
+                    metadata={
+                        "status": "completed",
+                        "success": True,
+                        "duration_ms": duration_ms,
+                        "end_time": datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
+                    }
+                )
                 
                 return result
                 
@@ -93,65 +105,40 @@ def monitor_llm(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any
                                 "execution_time": duration_ms
                             }
                         )
+
+                        # Mark run as failed
+                        await monitoring_service.end_run(
+                            run_id,
+                            metadata={
+                                "status": "error",
+                                "error": str(e),
+                                "duration_ms": duration_ms,
+                                "end_time": datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
+                            }
+                        )
+
                     except Exception as log_error:
                         logger.error(f"Error logging LLM metrics: {str(log_error)}", exc_info=True)
                 
                 logger.error(f"Error in monitored LLM operation: {str(e)}", exc_info=True)
                 raise
-                
-            finally:
-                if run_id:
-                    try:
-                        await monitoring_service.end_run(
-                            run_id,
-                            metadata={
-                                "duration_ms": duration_ms,
-                                "end_time": datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                            }
-                        )
-                    except Exception as end_error:
-                        logger.error(f"Error ending monitoring run: {str(end_error)}", exc_info=True)
                     
         return wrapper
     return decorator
 
 
 @trace_method
-def monitor_operation(operation_type: str, metadata: Optional[Dict[str, Any]] = None):
-    """
-    Decorator to monitor general operations.
-    Tracks execution time, success status, and custom metrics for any operation.
-
-    Args:
-        operation_type (str): Type of operation being monitored (e.g., "database_query", 
-            "file_operation", "api_call").
-        metadata (Optional[Dict[str, Any]]): Additional metadata about the operation.
-            Can include operation-specific details like resource usage, parameters, etc.
-
-    Returns:
-        Callable: Decorated function with monitoring capabilities.
-
-    Example:
-        @monitor_operation("database_query", metadata={"query_type": "select"})
-        async def fetch_user_data(user_id: str) -> Dict[str, Any]:
-            ...
-    """
+def monitor_operation(
+    operation_type: str, 
+    metadata: Optional[Dict[str, Any]] = None, 
+    **kwargs  # Catch any additional keyword arguments
+):
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
-        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            """
-            Wrapper function that implements the monitoring logic.
+        async def wrapper(*args: P.args, **kwargs_inner: P.kwargs) -> R:
+            # Remove any tracing-specific arguments
+            kwargs_inner.pop('include_in_parent', None)
             
-            Args:
-                *args: Positional arguments passed to the decorated function.
-                **kwargs: Keyword arguments passed to the decorated function.
-                
-            Returns:
-                The result of the decorated function.
-                
-            Raises:
-                Any exception that might occur during function execution or monitoring.
-            """
             start_time = time.time()
             timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
             run_name = f"{operation_type}_{func.__name__}_{timestamp}"
@@ -167,7 +154,7 @@ def monitor_operation(operation_type: str, metadata: Optional[Dict[str, Any]] = 
                 }
                 
                 run_id = await monitoring_service.start_run(run_name, enhanced_metadata)
-                result = await func(*args, **kwargs)
+                result = await func(*args, **kwargs_inner)
                 duration_ms = (time.time() - start_time) * 1000
                 
                 await monitoring_service.log_operation_metrics(
@@ -180,6 +167,17 @@ def monitor_operation(operation_type: str, metadata: Optional[Dict[str, Any]] = 
                         "result_type": type(result).__name__,
                         "execution_time": duration_ms,
                         **(metadata or {})
+                    }
+                )
+
+                # Mark run as completed
+                await monitoring_service.end_run(
+                    run_id,
+                    metadata={
+                        "status": "completed",
+                        "success": True,
+                        "duration_ms": duration_ms,
+                        "end_time": datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
                     }
                 )
                 
@@ -203,24 +201,23 @@ def monitor_operation(operation_type: str, metadata: Optional[Dict[str, Any]] = 
                                 **(metadata or {})
                             }
                         )
+
+                        # Mark run as completed
+                        await monitoring_service.end_run(
+                            run_id,
+                            metadata={
+                                "status": "completed",
+                                "success": True,
+                                "duration_ms": duration_ms,
+                                "end_time": datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
+                            }
+                        )
+                
                     except Exception as log_error:
                         logger.error(f"Error logging operation metrics: {str(log_error)}", exc_info=True)
                 
                 logger.error(f"Error in monitored operation: {str(e)}", exc_info=True)
                 raise
                 
-            finally:
-                if run_id:
-                    try:
-                        await monitoring_service.end_run(
-                            run_id,
-                            metadata={
-                                "duration_ms": duration_ms,
-                                "end_time": datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                            }
-                        )
-                    except Exception as end_error:
-                        logger.error(f"Error ending monitoring run: {str(end_error)}", exc_info=True)
-                    
         return wrapper
     return decorator

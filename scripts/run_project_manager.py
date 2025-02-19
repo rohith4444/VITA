@@ -13,27 +13,45 @@ import asyncio
 import json
 from datetime import datetime
 from typing import Dict, Any
+import signal
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method, tracing_service
 from memory.memory_manager import MemoryManager
 from agents.project_manager.agent import ProjectManagerAgent
 from agents.project_manager.state_graph import create_initial_state
 from backend.config import config
+from agents.core.monitoring.service import monitoring_service
 
 # Initialize logger
 logger = setup_logger("run_pm_agent")
 
-# Configure tracing service
-tracing_service.configure(
-    enabled=True,
-    include_timestamps=True,
-    include_args=True,
-    max_arg_length=100
-)
+# Shared flag for shutdown
+shutdown_event = asyncio.Event()
+
+async def cleanup(signal_received=None):
+    """Cleanup function to be called on shutdown."""
+    if signal_received:
+        logger.info(f'Received signal: {signal_received}')
+    logger.info('Starting cleanup process...')
+    
+    try:
+        await monitoring_service.cleanup()
+        logger.info('Monitoring service cleanup completed')
+    except Exception as e:
+        logger.error(f"Error cleaning up monitoring service: {str(e)}", exc_info=True)
+
+def signal_handler(signum, frame):
+    """Signal handler that works on both Windows and Unix."""
+    logger.info(f'Signal received: {signum}')
+    # Set the event
+    if asyncio.get_event_loop().is_running():
+        asyncio.get_event_loop().create_task(cleanup(signum))
+    shutdown_event.set()
 
 @trace_method
 async def run_project_manager(project_description: str) -> Dict[str, Any]:
     memory_manager = None
+    pm_agent = None
     
     try:
         # Initialize Memory Manager
@@ -53,33 +71,45 @@ async def run_project_manager(project_description: str) -> Dict[str, Any]:
         initial_state = create_initial_state(project_description)
         logger.info("Created initial state")
         
-        # Run the agent
-        result = await pm_agent.run(initial_state)
-        
-        if not result:
-            raise ValueError("Project Manager execution produced no result")
+        async with pm_agent:
+            # Run the agent
+            result = await pm_agent.run(initial_state)
             
-        logger.info("Project Manager execution completed")
-        
-        report = await pm_agent.generate_report()
-        logger.info("Generated final report")
+            if not result:
+                raise ValueError("Project Manager execution produced no result")
+                
+            logger.info("Project Manager execution completed")
+            
+            report = await pm_agent.generate_report()
+            logger.info("Generated final report")
 
-        return result
+            return result
 
     except Exception as e:
         logger.error(f"Error running Project Manager: {str(e)}", exc_info=True)
         raise
     
     finally:
+        if pm_agent:
+            try:
+                await cleanup()
+            except Exception as e:
+                logger.error(f"Error during monitoring cleanup: {str(e)}", exc_info=True)
+                
         if memory_manager:
             try:
                 await memory_manager.cleanup()
-            except Exception as cleanup_error:
-                logger.error(f"Error during cleanup: {str(cleanup_error)}")
+                logger.info("Memory manager cleanup completed")
+            except Exception as e:
+                logger.error(f"Error during memory cleanup: {str(e)}", exc_info=True)
 
 @trace_method
 async def main():
     try:
+        # Setup signal handlers in a cross-platform way
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+
         project_description = """
         Create a web application for task management with the following features:
         - User authentication
@@ -104,6 +134,14 @@ async def main():
     except Exception as e:
         print(f"Error: {str(e)}")
         logger.error("Main execution failed", exc_info=True)
+        await cleanup()
+    finally:
+        await cleanup()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Process interrupted by user")
+    except Exception as e:
+        logger.error(f"Process terminated with error: {str(e)}", exc_info=True)
