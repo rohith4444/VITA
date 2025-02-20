@@ -2,6 +2,7 @@
     height: 100%;
     width: 100%;
     padding: 1rem;
+    display: flex;
 }
 
 .top-search {
@@ -57,4 +58,11 @@
 .project-updated {
     font-size: 10px;
     text-align: right;
+    margin: 0px;
+}
+
+@media (max-width: 1000px) {
+    .project-card {
+        width: 90%;
+    }
 }

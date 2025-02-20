@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./chat.css";
 import SendIcon from '@mui/icons-material/Send';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -9,6 +9,14 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sidebarVisible, setSidebarVisible] = useState(true);
+
+  const lastMessageRef = useRef(null);
+
+  useEffect(() => {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    }
+  }, [messages]);
 
   const sendMessage = () => {
     if (input.trim()) {
@@ -26,7 +34,8 @@ const ChatInterface = () => {
         <div className="chat">
           <div className="chat-messages">
             {messages.map((msg, index) => (
-              <div key={index} className={`message ${msg.sender === "user" ? "sent" : "received"}`}>
+              <div key={index} ref={index === messages.length - 1 ? lastMessageRef : null}
+                className={`message ${msg.sender === "user" ? "sent" : "received"}`}>
                 {msg.text}
               </div>
             ))}

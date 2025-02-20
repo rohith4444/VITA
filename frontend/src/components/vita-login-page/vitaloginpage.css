@@ -41,6 +41,7 @@
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow: auto;
 }
 
 .chat-header {
@@ -58,35 +59,6 @@
     /* color: white; */
     cursor: pointer;
     font-size: 20px;
-}
-
-/* Chat Messages */
-.chat-messages {
-    flex-grow: 1;
-    padding: 15px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-
-.message {
-    max-width: 70%;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    border-radius: 15px;
-    word-wrap: break-word;
-}
-
-.sent {
-    background-color: #007bff;
-    color: white;
-    align-self: flex-end;
-}
-
-.received {
-    background-color: #e9ecef;
-    color: black;
-    align-self: flex-start;
 }
 
 .options-container {

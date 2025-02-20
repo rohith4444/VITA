@@ -4,12 +4,12 @@ import TextInput from "../../../common/textinput/TextInput";
 import CustomButton from "../../../common/button/CustomButton";
 
 const projects = [
-    { title: "AETHER AI", description: "I'm building an AI-Powered Project Development Platform...", updated: "1 day ago" },
-    { title: "VITA", description: "This project aims to develop an intelligent multi-agent...", updated: "1 month ago" },
-    { title: "Integrate DDS and dev py Package", description: "Turning Demographic sampling tool into a Python package...", updated: "6 months ago" },
-    { title: "Comp-HuSim", description: "A software stack for using LLMs to create complex personas...", updated: "6 months ago" },
-    { title: "LinDer", description: "A project which translates speech to text and vice versa...", updated: "6 months ago" },
-    { title: "How to use Claude", description: "An example project that also doubles as a how-to guide...", updated: "6 months ago" }
+    { title: "AETHER AI", description: "description", updated: "1 day ago" },
+    { title: "VITA", description: "description", updated: "1 month ago" },
+    { title: "Integrate DDS and dev py Package", description: "description", updated: "6 months ago" },
+    { title: "Comp-HuSim", description: "description", updated: "6 months ago" },
+    { title: "LinDer", description: "description", updated: "6 months ago" },
+    { title: "How to use Claude", description: "description", updated: "6 months ago" }
 ];
 
 const Project = ({ newProject, ...props }) => {
@@ -26,13 +26,53 @@ const Project = ({ newProject, ...props }) => {
                 </div>}
             </div>
             <div className="recent-projects">
-                {projects.map((project, index) => (
-                    <div className="project-card" key={index}>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                <div className="project-card" key="0">
+                    <h3 className="project-title">Title</h3>
+                    <p className="project-description">Description</p>
+                    <p className="project-updated">Updated</p>
+                </div>
+                {/* {projects.map((project, index) => (
+                    <div className="project-card">
                         <h3 className="project-title">{project.title}</h3>
                         <p className="project-description">{project.description}</p>
                         <p className="project-updated">Updated {project.updated}</p>
                     </div>
-                ))}
+                ))} */}
             </div>
         </div>
     );

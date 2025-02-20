@@ -96,8 +96,6 @@ const VitaLoginPage = () => {
                     <button className="close-sidebar" onClick={() => setSidebarVisible(false)}>✖</button>
                     <div className="options-container">
                         <nav style={styles.nav}>
-                            {/* <a href="#" style={styles.navItem}><Home /> Home</a>
-                            <a href="#" style={styles.navItem}><Sms /> Conversations</a> */}
                             <div style={styles.navItem} onClick={() => {setNewProject(false);setState(STATES.PROJECT)}}>
                                 <AccountTree /> 
                                 Projects 
@@ -130,6 +128,7 @@ const VitaLoginPage = () => {
                     </div>
                     {STATES.MAIN == state && <Main />}
                     {STATES.PROJECT == state && <Project newProject={newProject} />}
+                    {/* {STATES.RECENT == state && <></>} */}
                     {STATES.RECENT == state && <ChatInterface />}
                 </div>
             </div>
