@@ -57,10 +57,12 @@ const VitaLoginPage = () => {
                     <div className="options-container">
                         <nav className="sidebar-nav">
                             <div className="sidebar-navItem" onClick={() => {setNewProject(false);setState(STATES.PROJECT)}}>
-                                <AccountTree /> 
-                                Projects 
-                                {isProjectsExpanded ? <KeyboardArrowUp onClick={() => setIsProjectsExpanded(!isProjectsExpanded)} /> : <KeyboardArrowDown onClick={() => setIsProjectsExpanded(!isProjectsExpanded)} />}
-                                <AddCircleOutline onClick={(event) => {event.stopPropagation();setNewProject(true);setState(STATES.PROJECT)}}/>
+                                <div className="sidebar-navitem-icon-text">
+                                    <AccountTree /> 
+                                    Projects 
+                                    {isProjectsExpanded ? <KeyboardArrowUp onClick={() => setIsProjectsExpanded(!isProjectsExpanded)} /> : <KeyboardArrowDown onClick={() => setIsProjectsExpanded(!isProjectsExpanded)} />}
+                                </div>
+                                <AddCircleOutline onClick={(event) => {event.stopPropagation();setNewProject(!newProject);setState(STATES.PROJECT)}}/>
                             </div>
                             {isProjectsExpanded && (
                                 <div className="sidebar-project-list">
@@ -71,7 +73,11 @@ const VitaLoginPage = () => {
                             )}
                             {/* <a href="#" style={styles.navItem}><Bookmark /> Saved</a>
                             <a href="#" style={styles.navItem}><Settings /> Settings</a> */}
-                            <a className="sidebar-navItem"><Schedule /> Recent Chats</a>
+                            <a className="sidebar-navItem">
+                                <div className="sidebar-navitem-icon-text sidebar-navItem">
+                                    <Schedule /> Recent Chats
+                                </div>
+                            </a>
                             <div className="sidebar-project-list">
                                 <a className="sidebar-project-item"
                                     onClick={() => {setState(STATES.RECENT);getAllMessages("Project-1");setChatId("Project-1");}}>
@@ -88,8 +94,8 @@ const VitaLoginPage = () => {
                             </div>
                         </nav>
                         <div className="sidebar-profile-section">
-                            <div className="sidebar-profile-icon">M</div>
-                            <div className="sidebar-profile-name">Username</div>
+                            <div className="sidebar-profile-icon">FL</div>
+                            <div className="sidebar-profile-name">Firstname Lastname</div>
                         </div>
                     </div>
                 </div>

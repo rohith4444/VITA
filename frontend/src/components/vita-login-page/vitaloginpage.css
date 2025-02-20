@@ -1,7 +1,6 @@
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 15px;
 }
 
 .sidebar-navItem {
@@ -14,6 +13,14 @@
     padding: 5px;
     border-radius: 8px;
     transition: "background 0.2s";
+    justify-content: space-between;
+}
+
+.sidebar-navitem-icon-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .sidebar-project-list {
@@ -48,7 +55,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 1.5rem;
 }
 
 .sidebar-profile-name {
