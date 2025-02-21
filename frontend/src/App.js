@@ -4,19 +4,29 @@ import Login from './components/login/Login';
 import Main from './components/mainpage/Main';
 import Homepage from './components/vita-homepage/Homepage';
 import VitaLoginPage from './components/vita-login-page/VitaLoginPage';
+import Research from './components/research/Research';
+import News from './components/news/News';
+import Header from './components/common/header/Header';
+import Footer from './components/common/footer/Footer';
+import Company from './components/company/Company';
 
 function App() {
   return (
     <div className="App">
       <div class="container">
         <BrowserRouter>
+          <Header />
           <Routes>
             <Route path="/" element={<Main />}/ >
             {/* <Route index element={<Home />} /> */}
             <Route path="/login" element={<Login />} />
+            <Route path="/research" element={<Research />} />
+            <Route path="/company" element={<Company />} />
+            <Route path="/news" element={<News />} />
             <Route path="/vitahomepage" element={<Homepage />} />
             <Route path="/vitaloginpage" element={<VitaLoginPage />} />
           </Routes>
+          <Footer />
         </BrowserRouter>
       </div>
     </div>

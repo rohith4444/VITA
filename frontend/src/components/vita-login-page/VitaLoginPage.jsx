@@ -4,7 +4,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Header from "../common/header/Header";
 import Footer from "../common/footer/Footer";
 import Main from "./components/main/Main";
-import { AccountTree, KeyboardArrowUp, KeyboardArrowDown, AddCircleOutline, Schedule } from '@mui/icons-material';
+import { AccountTree, KeyboardArrowUp, KeyboardArrowDown, AddCircleOutline, Schedule, Home } from '@mui/icons-material';
 import Project from "./components/projects/Project";
 import ChatInterface from "../chat-interface/ChatInterface";
 
@@ -50,17 +50,25 @@ const VitaLoginPage = () => {
 
     return (
         <>
-            <Header />
+            {/* <Header /> */}
             <div className="chatbot-container">
                 <div className={`sidebar ${sidebarVisible ? "visible" : ""}`}>
                     <button className="close-sidebar" onClick={() => setSidebarVisible(false)}>✖</button>
                     <div className="options-container">
                         <nav className="sidebar-nav">
+                            <div className="sidebar-navItem">
+                                <div className="sidebar-navitem-icon-text" onClick={() => {setState(STATES.MAIN)}}>
+                                    <Home /> Home
+                                </div>
+                            </div>
                             <div className="sidebar-navItem" onClick={() => {setNewProject(false);setState(STATES.PROJECT)}}>
                                 <div className="sidebar-navitem-icon-text">
                                     <AccountTree /> 
                                     Projects 
-                                    {isProjectsExpanded ? <KeyboardArrowUp onClick={() => setIsProjectsExpanded(!isProjectsExpanded)} /> : <KeyboardArrowDown onClick={() => setIsProjectsExpanded(!isProjectsExpanded)} />}
+                                    {isProjectsExpanded ? 
+                                        <KeyboardArrowUp onClick={(event) => {event.stopPropagation();setIsProjectsExpanded(!isProjectsExpanded)}} /> : 
+                                        <KeyboardArrowDown onClick={(event) => {event.stopPropagation();setIsProjectsExpanded(!isProjectsExpanded)}} />
+                                    }
                                 </div>
                                 <AddCircleOutline onClick={(event) => {event.stopPropagation();setNewProject(!newProject);setState(STATES.PROJECT)}}/>
                             </div>
@@ -73,11 +81,11 @@ const VitaLoginPage = () => {
                             )}
                             {/* <a href="#" style={styles.navItem}><Bookmark /> Saved</a>
                             <a href="#" style={styles.navItem}><Settings /> Settings</a> */}
-                            <a className="sidebar-navItem">
+                            <div className="sidebar-navItem">
                                 <div className="sidebar-navitem-icon-text sidebar-navItem">
                                     <Schedule /> Recent Chats
                                 </div>
-                            </a>
+                            </div>
                             <div className="sidebar-project-list">
                                 <a className="sidebar-project-item"
                                     onClick={() => {setState(STATES.RECENT);getAllMessages("Project-1");setChatId("Project-1");}}>
@@ -113,7 +121,7 @@ const VitaLoginPage = () => {
                     <ChatInterface messages={messages} lastMessageRef={lastMessageRef} chatId={chatId} sendMessage={sendMessage} />}
                 </div>
             </div>
-            <Footer />
+            {/* <Footer /> */}
         </>
     );
 }

@@ -19,7 +19,7 @@ const Login = () => {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       <div className="landing-container">
         <div className="login-card">
           <div className="login-register-buttons">
@@ -77,7 +77,7 @@ const Login = () => {
           }
         </div>
       </div>
-      <Footer />
+      {/* <Footer /> */}
     </>
   );
 };

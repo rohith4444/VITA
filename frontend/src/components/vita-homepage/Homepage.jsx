@@ -83,7 +83,7 @@ const useCases = [
 const Homepage = () => {
     return (
         <>
-            <Header />
+            {/* <Header /> */}
             <div className="top-section">
                 <div className="left-section">
                     <div className="card">
@@ -141,7 +141,7 @@ const Homepage = () => {
                     ))}
                 </div>
             </div>
-            <Footer />
+            {/* <Footer /> */}
         </>
     );
 }
