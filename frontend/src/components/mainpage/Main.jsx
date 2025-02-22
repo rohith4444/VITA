@@ -10,7 +10,7 @@ import Footer from '../common/footer/Footer';
 const Main = () => {
     return (
         <>
-            <Header />
+            {/* <Header /> */}
             <div class="item mainblock">
                 <div class="mainblockTopLeft">
                     <div class="mainblockTopLeftTop">
@@ -27,7 +27,7 @@ const Main = () => {
             </div>
             <OurWork />
             <WorkWithUs />
-            <Footer />
+            {/* <Footer /> */}
         </>
     );
 }

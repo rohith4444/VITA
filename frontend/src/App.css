@@ -18,6 +18,13 @@
 
   --bg-navbar-light: #F8FAFD;
   --bg-navbar-dark: rgb(29, 29, 58);
+
+  --bg-gradient: #F8FAFD;
+  --text-primary: #2d3748;
+  --text-secondary: #4a5568;
+  --accent-color: #4299e1;
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .light-theme {
@@ -34,6 +41,20 @@
   --bg-primary: var(--bg-primary-dark);
   --bg-secondary: var(--bg-secondary-dark);
   --bg-navbar: var(--bg-navbar-dark);
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode {
+  --bg-gradient: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+  --text-primary: #f7fafc;
+  --text-secondary: #e2e8f0;
+  --card-bg: rgba(26, 32, 44, 0.8);
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .App {

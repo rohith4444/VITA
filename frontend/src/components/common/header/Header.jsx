@@ -54,7 +54,7 @@ export default function Header() {
       };
     return (
         <div class="header">
-            <div class="icon">
+            <div class="icon" onClick={() => navigate("/")}>
                 <Logo width={50} height={70} strokeWidth={15} />
                 <h4>AETHER AI</h4>
             </div>
@@ -73,9 +73,9 @@ export default function Header() {
                         <MenuItem onClick={handleClose}>Overview</MenuItem>
                         <MenuItem onClick={handleClose}>Agents</MenuItem>
                     </Menu>
-                    <CustomLink href="#" version="v1" underline="hover">Research</CustomLink>
-                    <CustomLink href="#" version="v1" underline="hover">Company</CustomLink>
-                    <CustomLink href="#" version="v1" underline="hover">News</CustomLink>
+                    <CustomLink href="/research" version="v1" underline="hover">Research</CustomLink>
+                    <CustomLink href="/company" version="v1" underline="hover">Company</CustomLink>
+                    <CustomLink href="/news" version="v1" underline="hover">News</CustomLink>
                     <CustomButton version="v1" onClick={() => navigate("/login")}>Try Vita</CustomButton>
                 </Stack>
             </div>

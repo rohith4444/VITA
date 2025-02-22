@@ -8,12 +8,12 @@ const ButtonV2 = styled.button`
     color: black;
     font-size: 14px;
     font-weight: 600;
-    padding: 12px 20px;
-    border: 2px solid black;
+    border: 1px solid black;
     border-radius: 8px;
     cursor: pointer;
     width: ${props => props.width ? props.width : 'auto'};
     margin: ${props => props.margin ? props.margin: '0px'};
+    padding: ${props => props.padding ? props.padding : '12px 20px'};
     transition: all 0.3s ease-in-out;
     &:hover {
         background-color: black;
@@ -26,13 +26,13 @@ const ButtonV1 = styled.button`
     color: white;
     font-size: 14px;
     font-weight: 600;
-    padding: 12px 20px;
-    border: 2px solid black;
+    border: 1px solid black;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease-in-out;
     width: ${props => props.width ? props.width : 'auto'};
     margin: ${props => props.margin ? props.margin: '0px'};
+    padding: ${props => props.padding ? props.padding : '12px 20px'};
 `
 
 export default function CustomButton({ version, ...props }) {
