@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import './vitaloginpage.css';
 import MenuIcon from '@mui/icons-material/Menu';
-import Header from "../common/header/Header";
-import Footer from "../common/footer/Footer";
 import Main from "./components/main/Main";
-import { AccountTree, KeyboardArrowUp, KeyboardArrowDown, AddCircleOutline, Schedule, Home } from '@mui/icons-material';
+import { AccountTree, KeyboardArrowUp, KeyboardArrowDown, AddCircleOutline, Schedule, Home, SupportAgent } from '@mui/icons-material';
 import Project from "./components/projects/Project";
 import ChatInterface from "../chat-interface/ChatInterface";
 
@@ -18,6 +16,7 @@ const VitaLoginPage = () => {
     const [chatId, setChatId] = useState("");
     const [sidebarVisible, setSidebarVisible] = useState(true);
     const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
+    const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
     const [state, setState] = useState(STATES.MAIN);
     const [newProject, setNewProject] = useState(false);
 
@@ -58,9 +57,21 @@ const VitaLoginPage = () => {
                         <nav className="sidebar-nav">
                             <div className="sidebar-navItem">
                                 <div className="sidebar-navitem-icon-text" onClick={() => {setState(STATES.MAIN)}}>
-                                    <Home /> Home
+                                    <SupportAgent /> Agents
+                                    {isAgentsExpanded ? 
+                                        <KeyboardArrowUp onClick={(event) => {event.stopPropagation();setIsAgentsExpanded(!isAgentsExpanded)}} /> : 
+                                        <KeyboardArrowDown onClick={(event) => {event.stopPropagation();setIsAgentsExpanded(!isAgentsExpanded)}} />
+                                    }
                                 </div>
+                                <AddCircleOutline onClick={(event) => {event.stopPropagation();setNewProject(!newProject);setState(STATES.PROJECT)}}/>
                             </div>
+                            {isAgentsExpanded && (
+                                <div className="sidebar-project-list">
+                                    <a href="#" className="sidebar-project-item"> Agent-1</a>
+                                    <a href="#" className="sidebar-project-item"> Agent-2</a>
+                                    <a href="#" className="sidebar-project-item"> Agent-3</a>
+                                </div>
+                            )}
                             <div className="sidebar-navItem" onClick={() => {setNewProject(false);setState(STATES.PROJECT)}}>
                                 <div className="sidebar-navitem-icon-text">
                                     <AccountTree /> 
@@ -81,7 +92,7 @@ const VitaLoginPage = () => {
                             )}
                             {/* <a href="#" style={styles.navItem}><Bookmark /> Saved</a>
                             <a href="#" style={styles.navItem}><Settings /> Settings</a> */}
-                            <div className="sidebar-navItem">
+                            <div className="sidebar-navItem margin-top-2rem">
                                 <div className="sidebar-navitem-icon-text sidebar-navItem">
                                     <Schedule /> Recent Chats
                                 </div>

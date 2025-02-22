@@ -26,11 +26,11 @@ const Main = () => {
             <CustomButton className="main-container-button-group-button" version="v2" padding="5px 10px">
               <Lightbulb />Generate interview questions
             </CustomButton>
-            <CustomButton className="main-container-button-group-button" version="v2">
-              <StickyNote2 fontSize="large" /> Write a memo
+            <CustomButton className="main-container-button-group-button" version="v2" padding="5px 10px">
+              <StickyNote2 /> Write a memo
             </CustomButton>
-            <CustomButton className="main-container-button-group-button" version="v2">
-              <Summarize fontSize="large" /> Summarize meeting notes
+            <CustomButton className="main-container-button-group-button" version="v2" padding="5px 10px">
+              <Summarize /> Summarize meeting notes
             </CustomButton>
           </div>
         </div>
