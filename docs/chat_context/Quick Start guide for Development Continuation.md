@@ -1,141 +1,223 @@
-# Quick Start Guide for Development Continuation
+# VITA Agent Development Quick Start Guide
 
-## Initial Setup
+## Introduction
 
-### 1. Required Files
-Upload these files to continue development:
+This guide provides essential information for developing agents within the VITA AI Agent Development Platform. It covers common patterns and agent-specific implementations.
+
+## System Architecture
+
+### Agent Structure
 ```
-Core Files:
-- agents/core/project_manager/agent.py
-- agents/core/llm/service.py
-- agents/core/monitoring/*.py
-- memory/*.py
-- tools/project_manager/*.py
-- backend/config.py
-
-Documentation:
-- Updated Project State Document
-- Monitoring System Overview
-- Monitoring TODO List
-```
-
-### 2. Environment Configuration
-Ensure these environment variables are set:
-```bash
-# Core Configuration
-OPENAI_API_KEY=your_openai_key
-POSTGRES_DB=your_db_name
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_db_password
-POSTGRES_HOST=your_db_host
-POSTGRES_PORT=your_db_port
-
-# Monitoring Configuration
-MONITORING_ENABLED=true
-LANGSMITH_API_KEY=your_langsmith_key
-LANGCHAIN_PROJECT=your_project_name
-LANGCHAIN_TRACING_V2=true
+agents/
+├── core/                    # Core components
+│   ├── base_agent.py       # Base agent class
+│   ├── llm/                # Shared LLM components
+│   └── monitoring/         # Monitoring system
+├── project_manager/        # Project Manager implementation
+│   ├── agent.py
+│   └── state_graph.py
+└── solution_architect/     # Solution Architect implementation
+    ├── agent.py
+    ├── state_graph.py
+    └── llm/                # Agent-specific LLM components
+        ├── prompts.py
+        └── service.py
 ```
 
-### 3. Dependencies
-Ensure these packages are installed:
-```bash
-pip install langsmith>=0.0.69
-pip install langchain>=0.1.0
+### Common Components
+- Memory System (Three-tier storage)
+- Monitoring System (LangSmith integration)
+- Base LLM Service
+- Logging System
+- Tracing System
+
+## Agent Development Guide
+
+### 1. Define Agent State
+Each agent needs a TypedDict defining its state structure:
+
+```python
+# Example: Project Manager State
+class ProjectManagerGraphState(TypedDict):
+    input: str
+    status: str
+    project_plan: Dict[str, Any]
+
+# Example: Solution Architect State
+class SolutionArchitectGraphState(TypedDict):
+    input: str
+    project_plan: Dict[str, Any]
+    tech_stack: Dict[str, List[str]]
+    architecture_design: Dict[str, Any]
+    validation_results: Dict[str, Any]
+    specifications: Dict[str, Any]
+    status: str
 ```
 
-## Development Workflow
+### 2. Build Agent Workflow
 
-### 1. Documentation Reference
-- Check Project State Document for current status
-- Review component-specific documentation
-- Consult monitoring overview for instrumentation
+Each agent implements its workflow using LangGraph:
 
-### 2. Component Development
-Current focus areas:
-1. Project Manager Agent workflow
-2. Monitoring system expansion
-3. Memory system optimization
-4. Tool enhancements
+```python
+def _build_graph(self) -> StateGraph:
+    graph = StateGraph(AgentGraphState)
+    
+    # Add nodes for workflow steps
+    graph.add_node("start", self.receive_input)
+    # Add agent-specific nodes
+    
+    # Add edges for workflow flow
+    graph.add_edge("start", "next_step")
+    # Add agent-specific edges
+    
+    return graph.compile()
+```
 
-### 3. Monitoring Integration
-When developing new features:
-1. Add appropriate monitoring decorators
-2. Include relevant metadata
-3. Ensure proper error handling
-4. Verify metric collection
+### 3. LLM Integration Options
+
+#### Option 1: Use Core LLM Service
+For simple agents with standard LLM needs:
+```python
+from agents.core.llm.service import LLMService
+
+class SimpleAgent(BaseAgent):
+    def __init__(self):
+        self.llm_service = LLMService()
+```
+
+#### Option 2: Agent-Specific LLM Service
+For agents needing specialized LLM handling:
+```python
+agents/solution_architect/llm/
+├── prompts.py      # Agent-specific prompts
+└── service.py      # Specialized LLM methods
+```
+
+### 4. Tool Organization
+
+Tools should be organized by agent and functionality:
+```
+tools/
+├── project_manager/
+│   ├── task_breakdown.py
+│   └── resource_allocator.py
+└── solution_architect/
+    ├── technology_selector.py
+    ├── architecture_validator.py
+    └── specification_generator.py
+```
+
+## Agent-Specific Implementations
+
+### Project Manager Agent
+Focus: Project planning and management
+```python
+class ProjectManagerAgent(BaseAgent):
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Workflow:
+        1. Receive project input
+        2. Analyze requirements
+        3. Generate project plan
+        """
+```
+
+### Solution Architect Agent
+Focus: Technical architecture and specifications
+```python
+class SolutionArchitectAgent(BaseAgent):
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Workflow:
+        1. Analyze technical requirements
+        2. Select technology stack
+        3. Design architecture
+        4. Validate architecture
+        5. Generate specifications
+        """
+```
+
+## Key Differences Between Agents
+
+### State Management
+- **Project Manager**: Focuses on project structure and resource allocation
+- **Solution Architect**: Maintains complex technical state including tech stack and architecture
+
+### LLM Integration
+- **Project Manager**: Uses core LLM service
+- **Solution Architect**: Has specialized LLM service with custom prompts
+
+### Tool Usage
+- **Project Manager**: Tools for project breakdown and resource management
+- **Solution Architect**: Tools for tech selection and architecture validation
 
 ## Best Practices
 
-### 1. Code Organization
-- Follow existing project structure
-- Maintain consistent file organization
-- Use type hints and documentation
+### 1. State Design
+- Keep state minimal but complete
+- Use TypedDict for type safety
+- Document state fields
 
-### 2. Monitoring
-- Use appropriate decorators
-- Include relevant metadata
-- Handle errors gracefully
-- Log important events
+### 2. Error Handling
+```python
+try:
+    result = await operation()
+    return result
+except Exception as e:
+    self.logger.error(f"Operation failed: {str(e)}", exc_info=True)
+    return fallback_result()
+```
 
-### 3. Documentation
-- Update project state document
-- Maintain component documentation
-- Document new monitoring metrics
+### 3. Memory Usage
+```python
+# Store important results
+await self.memory_manager.store(
+    agent_id=self.agent_id,
+    memory_type=MemoryType.LONG_TERM,
+    content=result,
+    importance=0.8
+)
+```
 
-## Common Tasks
-
-### 1. Adding New Agent Operations
+### 4. Monitoring
 ```python
 @monitor_operation(
-    operation_type="operation_name",
-    metadata={
-        "phase": "phase_name",
-        "memory_operations": {...},
-        "tools_used": [...]
-    }
+    operation_type="process_data",
+    metadata={"phase": "processing"}
 )
-async def new_operation(self, state: ProjectManagerGraphState) -> Dict[str, Any]:
+async def process_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
     # Implementation
 ```
 
-### 2. Adding LLM Operations
-```python
-@monitor_llm(
-    run_name="operation_name",
-    metadata={
-        "operation_details": {
-            "prompt_template": "template_name",
-            "max_tokens": token_limit,
-            "temperature": temp_value
-        }
-    }
-)
-async def llm_operation(self, input_data: str) -> Dict[str, Any]:
-    # Implementation
-```
+## Testing and Deployment
 
-### 3. Adding New Tools
-1. Create tool in tools/project_manager/
-2. Add monitoring in agent implementation
-3. Update documentation
+1. Test agent in isolation
+2. Verify memory operations
+3. Check monitoring metrics
+4. Validate error handling
+5. Test integration with other agents
 
-## Troubleshooting
+## Common Issues and Solutions
 
-### 1. Monitoring Issues
-- Verify environment variables
-- Check LangSmith connectivity
-- Review monitoring service logs
+1. **Empty LLM Responses**
+   - Implement retry logic
+   - Return empty JSON instead of None
+   - Log response content for debugging
 
-### 2. Development Issues
-- Consult project state document
-- Review component documentation
-- Check existing implementations
+2. **Memory Management**
+   - Clear obsolete data
+   - Use appropriate memory types
+   - Handle retrieval failures
+
+3. **State Transitions**
+   - Validate state before transitions
+   - Handle incomplete states
+   - Log state changes
 
 ## Next Steps
 
-1. Review current project state
-2. Choose component to work on
-3. Upload necessary files
-4. Configure environment
-5. Begin development
+1. Choose agent type based on responsibility
+2. Follow appropriate implementation pattern
+3. Implement required components
+4. Test thoroughly
+5. Document agent capabilities
