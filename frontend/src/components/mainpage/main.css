@@ -4,7 +4,7 @@
     flex-direction: row;
     flex: 1;
     padding-top: 2rem;
-    height: calc(100vh - 105px);
+    height: 100vh;
     justify-content: center;
     align-items: center;
 }
@@ -13,7 +13,9 @@
     display: flex;
     flex-direction: column;
     flex: 1.5;
-    padding-left: 10rem;
+    padding-left: 5rem;
+    justify-content: center;
+    align-items: center;
 }
 
 .mainblockTopLeft h1 {
@@ -26,10 +28,14 @@
 }
 
 .mainblockTopLeftTop {
-
+    flex: 1;
 }
 
 .mainblockTopLeftBottom {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
 }

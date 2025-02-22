@@ -1,39 +1,54 @@
-import { React, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import "./chat.css";
 import SendIcon from '@mui/icons-material/Send';
-import CustomButton from "../common/button/CustomButton";
+import TextInput from "../common/textinput/TextInput";
 
-const ChatInterface = ({ selectedProject, ...props }) => {
-    const [messages, setMessages] = useState([]);
-    const [input, setInput] = useState("");
+const ChatInterface = ({ ...props }) => {
+  // const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
 
-    const sendMessage = () => {
-        if (input.trim()) {
-        setMessages([...messages, { text: input, sender: "user" }]);
-        setInput("");
-        }
-    };
+  // const lastMessageRef = useRef(null);
 
-    return (
-        <div className="chat-section">
-        <h2>{selectedProject}</h2>
+  // useEffect(() => {
+  //   if (lastMessageRef.current) {
+  //     lastMessageRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  //   }
+  // }, [messages]);
+
+  const sendMessage = () => {
+      props.sendMessage(input);
+      setInput("");
+  };
+
+  return (
+    <div className="chat-container">
+      <div className="chat">
         <div className="chat-messages">
-            {messages.map((msg, index) => (
-            <div key={index} className="message">
-                <strong>{msg.sender}:</strong> {msg.text}
+          {props.messages.map((msg, index) => (
+            <div key={index} ref={index === props.messages.length - 1 ? props.lastMessageRef : null}
+              className={`message ${msg.sender === "user" ? "sent" : "received"}`}>
+              {msg.text}
             </div>
-            ))}
+          ))}
         </div>
-        <div className="input-container">
-            <input
-            type="text"
-            placeholder="Type a message..."
-            value={input}
+        
+        <div className="chat-input">
+          <TextInput
+            type="text" 
+            // placeholder="Type a message..." 
+            label="Message your Agent"
+            value={input} 
+            fullWidth
             onChange={(e) => setInput(e.target.value)}
-            />
-            <CustomButton version='bv1' variant='contained' onClick={sendMessage} endIcon={<SendIcon />}>Send</CustomButton>
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          />
+          <button className="send-button" onClick={sendMessage}>
+            <SendIcon size={20} />
+          </button>
         </div>
-        </div>
-    );
-}
+      </div>
+    </div>
+  );
+};
 
 export default ChatInterface;

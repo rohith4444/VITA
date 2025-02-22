@@ -1,0 +1,140 @@
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.margin-top-2rem {
+    margin-top: 2rem;
+}
+
+.sidebar-navItem {
+    color: black;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: "background 0.2s";
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.sidebar-navitem-icon-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.sidebar-project-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 30px;
+}
+
+.sidebar-project-item {
+    color: black;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 0px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sidebar-profile-section {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-top: 1px solid #444;
+}
+
+.sidebar-profile-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #ccc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.sidebar-profile-name {
+    font-size: 16px;
+}
+
+/* Main Chatbot Container */
+.chatbot-container {
+    display: flex;
+    height: calc(100vh - 70px);
+    padding-top: 70px;
+    background-color: #f4f4f9;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: 250px;
+    background-color: #ffffff;
+    border-right: 1px solid #ddd;
+    padding: 10px;
+    transition: transform 0.3s ease-in-out;
+}
+
+.sidebar.visible {
+    transform: translateX(0);
+}
+
+.sidebar:not(.visible) {
+    transform: translateX(-100%);
+    position: absolute;
+}
+
+.close-sidebar {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    float: right;
+}
+
+/* Chatbox Styling */
+.chatbox {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* padding: 15px; */
+    /* background-color: #007bff; */
+    color: white;
+}
+
+.menu-button {
+    background: none;
+    border: none;
+    /* color: white; */
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.options-container {
+    height: 97%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}

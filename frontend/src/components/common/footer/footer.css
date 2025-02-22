@@ -1,22 +1,78 @@
 .footer {
-    background-color: var(--bg-primary-light);
-    border-color: red;
-    border-top: 2px;
+    background-color: white;
+    border-top: 1px solid black;
+    width: 100%;
 }
 
 .topFooter {
     display: flex;
     flex-direction: row;
     padding: 1rem 2rem;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
+/* Left section */
 .topLeftFooter {
     display: flex;
     flex: 1;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
+/* Right section */
 .topRightFooter {
     display: flex;
     flex: 1;
-    justify-content: flex-end;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.bottomFooter {
+    display: flex;
+    flex-direction: row;
+}
+
+.social-media {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-icons {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+.vertical {
+    width: 300px;
+    flex-direction: column;
+}
+
+.android {
+    width: 200px;
+}
+.apple {
+    width: 164px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .topFooter {
+        flex-direction: column;
+        padding: 1rem;
+        align-items: center;
+        text-align: center;
+    }
+
+    .topLeftFooter,
+    .topRightFooter {
+        flex: unset;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
 }
