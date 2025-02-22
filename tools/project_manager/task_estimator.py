@@ -1,10 +1,14 @@
 from core.logging.logger import setup_logger
 from typing import Literal
+from core.tracing.service import trace_method
+
 
 logger = setup_logger("tools.project_manager.task_estimator")
 
 EffortLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
+
+@trace_method
 def estimate_task_complexity(task_name: str) -> EffortLevel:
     """
     Determine task complexity based on heuristics.

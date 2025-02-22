@@ -4,7 +4,9 @@ from typing import Dict, List, Any, Optional
 from collections import defaultdict
 from ..base import BaseMemory, MemoryEntry, MemoryType
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
+@trace_class
 class ShortTermMemory(BaseMemory):
     """
     Implementation of short-term memory with automatic decay.
@@ -307,3 +309,14 @@ class ShortTermMemory(BaseMemory):
                 await self._cleanup_task
             except asyncio.CancelledError:
                 pass
+
+    async def cleanup(self) -> None:
+        """Cleanup resources before shutdown."""
+        self.logger.info("Cleaning up Short-Term Memory resources")
+        if self._cleanup_task and not self._cleanup_task.cancelled():
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+        self.logger.info("Short-Term Memory cleanup completed")

@@ -2,6 +2,8 @@ import os
 from typing import Optional
 from dotenv import load_dotenv
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
+
 
 # Initialize logger
 logger = setup_logger("config")
@@ -16,11 +18,13 @@ else:
     logger.warning("Default .env file not found")
 
 # Load specific environment files if available
-ENV = os.getenv("ENV", "development")
+ENV = os.getenv("ENV", "base")
 logger.info(f"Current environment: {ENV}")
 
 try:
-    if ENV == "development":
+    if ENV == "base":  # Don't load any additional env files
+        pass
+    elif ENV == "development":
         env_path = os.path.join(os.path.dirname(__file__), ".env.development")
         if os.path.exists(env_path):
             load_dotenv(env_path, override=True)
@@ -41,6 +45,7 @@ except Exception as e:
     logger.error(f"Error loading environment variables: {str(e)}", exc_info=True)
     raise
 
+@trace_class
 class Config:
     """
     Configuration settings for the backend.
@@ -112,12 +117,26 @@ class Config:
             ValueError: If any required database configuration is missing
         """
         try:
+            # Log individual components
+            self.logger.debug(f"Database connection parameters:")
+            self.logger.debug(f"  Host: {self.POSTGRES_HOST}")
+            self.logger.debug(f"  Port: {self.POSTGRES_PORT}")
+            self.logger.debug(f"  Database: {self.POSTGRES_DB}")
+            self.logger.debug(f"  User: {self.POSTGRES_USER}")
+            self.logger.debug(f"  Password length: {len(self.POSTGRES_PASSWORD)} chars")  # Don't log actual password
+            
             url = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
             self.logger.debug("Generated database URL successfully")
+            
+            # Log the URL with password masked
+            masked_url = url.replace(self.POSTGRES_PASSWORD, "****")
+            self.logger.debug(f"Database URL: {masked_url}")
+            
             return url
         except Exception as e:
             self.logger.error(f"Failed to generate database URL: {str(e)}", exc_info=True)
             raise
+
 
     def validate_config(self) -> bool:
         """

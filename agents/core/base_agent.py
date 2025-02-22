@@ -2,12 +2,13 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, Any
 from core.logging.logger import setup_logger
+from core.tracing.service import  trace_class
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
-from langgraph.graph import StateGraph, END
 
+@trace_class
 class BaseAgent(ABC):
-    """Abstract base class for all agents using LangGraph."""
+    """Abstract base class for all agents."""
     
     def __init__(self, agent_id: str, name: str, memory_manager: MemoryManager):
         self.logger = setup_logger(f"base_agent.{name.lower()}")
@@ -19,60 +20,10 @@ class BaseAgent(ABC):
             self.created_at = datetime.utcnow()
             self.status = "initialized"
             self.memory_manager = memory_manager
-            
-            self.logger.debug(f"Agent created at: {self.created_at}")
-            self.logger.debug(f"Initial status: {self.status}")
-
-            # Initialize processing graph
-            self.logger.info("Building agent state graph")
-            self.graph = self._build_graph()
-            self.logger.info("Agent initialization completed successfully")
+            self.logger.info("Base agent initialization completed")
             
         except Exception as e:
             self.logger.error(f"Failed to initialize base agent: {str(e)}", exc_info=True)
-            raise
-    
-    def _build_graph(self) -> StateGraph:
-        """Builds the LangGraph-based execution flow for this agent."""
-        self.logger.debug("Building agent graph")
-        try:
-            graph = StateGraph(dict)
-            
-            # Add agent-specific nodes
-            self.logger.debug("Adding agent-specific nodes")
-            self.add_graph_nodes(graph)
-            
-            # Define entry point
-            self.logger.debug("Setting graph entry point to 'start'")
-            graph.set_entry_point("start")
-            
-            # Compile graph
-            self.logger.debug("Compiling agent graph")
-            compiled_graph = graph.compile()
-            self.logger.info("Graph built successfully")
-            
-            return compiled_graph
-            
-        except Exception as e:
-            self.logger.error(f"Failed to build agent graph: {str(e)}", exc_info=True)
-            raise
-    
-    @abstractmethod
-    def add_graph_nodes(self, graph: StateGraph) -> None:
-        """Each agent defines its own processing nodes."""
-        pass
-
-    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Executes the agent's workflow using LangGraph."""
-        self.logger.info("Starting agent workflow execution")
-        try:
-            self.logger.debug(f"Input data: {str(input_data)[:200]}...")
-            result = self.graph.invoke({"input": input_data, "status": self.status})
-            self.logger.info("Agent workflow completed successfully")
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error during agent execution: {str(e)}", exc_info=True)
             raise
 
     async def update_memory(self, memory_type: str, data: Any) -> None:
@@ -118,6 +69,28 @@ class BaseAgent(ABC):
             raise
 
     @abstractmethod
-    async def generate_report(self) -> Dict[str, Any]:
-        """Generate a report of the agent's activities and findings."""
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the agent's workflow."""
         pass
+
+    @abstractmethod
+    async def generate_report(self) -> Dict[str, Any]:
+        """Generate a report of the agent's activities."""
+        pass
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with cleanup."""
+        try:
+            # Cleanup monitoring
+            from agents.core.monitoring.service import monitoring_service
+            await monitoring_service.cleanup()
+            
+            # Cleanup memory
+            if hasattr(self, 'memory_manager'):
+                await self.memory_manager.cleanup()
+        except Exception as e:
+            self.logger.error(f"Error during agent cleanup: {str(e)}", exc_info=True)

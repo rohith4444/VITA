@@ -1,0 +1,24 @@
+// Solution Architect Workflow
+digraph solution_architect_workflow {
+	fontname=Arial nodesep=0.5 rankdir=TB ranksep=0.75 splines=ortho
+	fontname="Arial Bold" fontsize=20 label="
+Solution Architect Workflow
+"
+	validate_architecture [label="Validate
+Architecture" fillcolor="#E6F3FF" fontcolor="#000080" fontname=Arial fontsize=12 height=0.6 penwidth=2 shape=box style="rounded,filled" width=1.8]
+	analyze_requirements [label="Analyze
+Requirements" fillcolor="#E6F3FF" fontcolor="#000080" fontname=Arial fontsize=12 height=0.6 penwidth=2 shape=box style="rounded,filled" width=1.8]
+	design_architecture [label="Design
+Architecture" fillcolor="#E6F3FF" fontcolor="#000080" fontname=Arial fontsize=12 height=0.6 penwidth=2 shape=box style="rounded,filled" width=1.8]
+	start [label=Start fillcolor="#90EE90" fontcolor="#006400" fontname=Arial fontsize=12 height=0.6 penwidth=2 shape=box style="rounded,filled" width=1.8]
+	generate_specifications [label="Generate
+Specifications" fillcolor="#E6F3FF" fontcolor="#000080" fontname=Arial fontsize=12 height=0.6 penwidth=2 shape=box style="rounded,filled" width=1.8]
+	select_tech_stack [label="Select
+Tech
+Stack" fillcolor="#E6F3FF" fontcolor="#000080" fontname=Arial fontsize=12 height=0.6 penwidth=2 shape=box style="rounded,filled" width=1.8]
+	start -> analyze_requirements [arrowsize=0.8 color="#666666" fontname=Arial fontsize=10 penwidth=1.5]
+	analyze_requirements -> select_tech_stack [arrowsize=0.8 color="#666666" fontname=Arial fontsize=10 penwidth=1.5]
+	select_tech_stack -> design_architecture [arrowsize=0.8 color="#666666" fontname=Arial fontsize=10 penwidth=1.5]
+	design_architecture -> validate_architecture [arrowsize=0.8 color="#666666" fontname=Arial fontsize=10 penwidth=1.5]
+	validate_architecture -> generate_specifications [arrowsize=0.8 color="#666666" fontname=Arial fontsize=10 penwidth=1.5]
+}

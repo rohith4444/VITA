@@ -1,5 +1,8 @@
 from core.logging.logger import setup_logger
 from typing import Dict, Any, List
+from core.tracing.service import trace_method
+
+
 
 logger = setup_logger("tools.project_manager.resource_allocator")
 
@@ -10,6 +13,7 @@ AGENTS = {
     "QA/Test Agent": ["test", "quality assurance"]
 }
 
+@trace_method
 def allocate_resources(milestones: List[Dict[str, Any]]) -> Dict[str, List[str]]:
     """
     Assign tasks to the most suitable agents.

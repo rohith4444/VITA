@@ -1,102 +1,119 @@
-from typing import TypedDict, List
+from typing import TypedDict, List, Dict, Any
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
-# Initialize logger at module level
+# Initialize logger
 logger = setup_logger("project_manager.state_graph")
-logger.info("Initializing Project Manager State Graph module")
 
+
+@trace_class
 class ProjectManagerGraphState(TypedDict):
     """
-    Defines the state structure for ProjectManagerAgent's execution in LangGraph.
+    Defines the state structure for ProjectManager's workflow.
     
     Attributes:
-        project_description (str): The raw project input provided by the user.
-        requirements (dict): Structured requirements extracted from the project input.
-        milestones (list): List of project milestones and tasks.
-        resource_allocation (dict): Assigned resources for task execution.
-        timeline_options (list): Different execution timelines for project completion.
-        status (str): Current execution status of the project manager.
+        input (str): Raw project description/requirements
+        requirements (Dict[str, Any]): Structured requirements after analysis
+        project_plan (Dict[str, Any]): Generated project plan
+        status (str): Current workflow status
     """
-    project_description: str
-    requirements: dict
-    milestones: List[dict]
-    resource_allocation: dict
-    timeline_options: List[dict]
+    input: str
+    requirements: Dict[str, Any]
+    project_plan: Dict[str, Any]
     status: str
 
-def validate_state(state: ProjectManagerGraphState) -> bool:
+def validate_state(state: Dict[str, Any]) -> bool:
     """
-    Validates the state dictionary structure and types.
+    Validates state dictionary structure.
     
     Args:
-        state: The state dictionary to validate.
+        state: State dictionary to validate
         
     Returns:
-        bool: True if valid, raises exception if invalid.
+        bool: True if valid, raises exception if invalid
     """
-    logger.debug("Starting state validation")
+    logger.debug("Validating state")
+    
     try:
-        required_keys = {'project_description', 'requirements', 'milestones', 
-                        'resource_allocation', 'timeline_options', 'status'}
+        # Required keys at different stages
+        stage_requirements = {
+            "initialized": ["input", "status"],
+            "analyzing_requirements": ["input", "status"],
+            "generating_project_plan": ["input", "requirements", "status"],
+            "completed": ["input", "requirements", "project_plan", "status"]
+        }
         
-        # Check for missing keys
-        missing_keys = required_keys - set(state.keys())
+        # Get current stage from status
+        current_stage = state.get("status", "initialized")
+        required_keys = stage_requirements.get(current_stage, ["input", "status"])
+        
+        # Check for required keys
+        missing_keys = [key for key in required_keys if key not in state]
         if missing_keys:
-            logger.error(f"State validation failed: missing keys {missing_keys}")
-            raise KeyError(f"Missing required keys: {missing_keys}")
+            raise KeyError(f"Missing required keys for stage {current_stage}: {missing_keys}")
         
-        # Type validation
-        type_checks = [
-            ('project_description', str),
-            ('requirements', dict),
-            ('milestones', list),
-            ('resource_allocation', dict),
-            ('timeline_options', list),
-            ('status', str)
-        ]
-        
-        for field, expected_type in type_checks:
-            if not isinstance(state[field], expected_type):
-                logger.error(f"Type validation failed for {field}: expected {expected_type}, got {type(state[field])}")
-                raise TypeError(f"'{field}' must be {expected_type}, got {type(state[field])}")
-        
-        logger.info("State validation successful")
-        logger.debug(f"Current state status: {state['status']}")
+        # Validate types based on stage
+        if "input" in state and not isinstance(state["input"], str):
+            raise TypeError("'input' must be a string")
+            
+        if "requirements" in state and not isinstance(state["requirements"], dict):
+            raise TypeError("'requirements' must be a dictionary")
+            
+        if "project_plan" in state and not isinstance(state["project_plan"], dict):
+            raise TypeError("'project_plan' must be a dictionary")
+            
+        if not isinstance(state["status"], str):
+            raise TypeError("'status' must be a string")
+            
+        logger.info(f"State validation successful for stage: {current_stage}")
         return True
         
     except Exception as e:
         logger.error(f"State validation failed: {str(e)}", exc_info=True)
         raise
 
-def create_initial_state(project_description: str) -> ProjectManagerGraphState:
+def create_initial_state(project_description: str) -> Dict[str, Any]:
     """
-    Creates an initial state dictionary with default values for ProjectManagerAgent.
+    Creates initial state for the workflow.
     
     Args:
-        project_description: The initial project description provided by the user.
+        project_description: Initial project description
         
     Returns:
-        ProjectManagerGraphState: Initialized state dictionary.
+        Dict[str, Any]: Initial state dictionary
     """
-    logger.info("Creating initial project manager state")
+    logger.info("Creating initial state")
+    
     try:
-        logger.debug(f"Initializing state with project description: {project_description[:100]}...")
-        
-        state: ProjectManagerGraphState = {
-            'project_description': project_description,
-            'requirements': {},
-            'milestones': [],
-            'resource_allocation': {},
-            'timeline_options': [],
-            'status': 'initialized'
+        state = {
+            "input": project_description,
+            "status": "initialized"
         }
         
-        # Validate the created state
+        # Validate initial state
         validate_state(state)
         
-        logger.info("Initial state created and validated successfully")
+        logger.debug(f"Created initial state: {state}")
         return state
         
     except Exception as e:
         logger.error(f"Failed to create initial state: {str(e)}", exc_info=True)
         raise
+
+def get_next_stage(current_stage: str) -> str:
+    """
+    Determines the next stage in the workflow.
+    
+    Args:
+        current_stage: Current workflow stage
+        
+    Returns:
+        str: Next stage name
+    """
+    stage_flow = {
+        "initialized": "analyzing_requirements",
+        "analyzing_requirements": "generating_project_plan",
+        "generating_project_plan": "completed"
+    }
+    
+    return stage_flow.get(current_stage, "completed")

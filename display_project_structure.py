@@ -13,7 +13,9 @@ def display_structure(startpath, exclude_dirs=None, exclude_files=None):
             'venv', 
             'node_modules', 
             '.next',  
-            'backend_v1'  # Added backend_v1 to exclude list
+            'backend_v1',
+            'frontend',
+            'logs'  # Added backend_v1 to exclude list
         ]
     if exclude_files is None:
         exclude_files = ['.pyc', '.pyo', '.pyd', '.DS_Store']

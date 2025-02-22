@@ -4,9 +4,13 @@ from typing import Dict, Any, List, Optional
 from agents.core.llm.service import LLMService
 from agents.core.llm.prompts import format_project_plan_prompt
 from .task_estimator import estimate_task_complexity
+from core.tracing.service import trace_method
+
+
 
 logger = setup_logger("tools.project_manager.task_breakdown")
 
+@trace_method
 async def generate_task_breakdown(
     problem_statement: str, 
     features: List[str], 
@@ -35,33 +39,32 @@ async def generate_task_breakdown(
         logger.debug(f"Generated prompt length: {len(prompt)}")
 
         # Step 2: Call LLM to generate milestone-based tasks
-        response = await llm_service.generate_project_plan(prompt)
+        response = await llm_service.generate_project_plan(problem_statement, features)
         logger.debug("Received LLM response")
 
-        # Step 3: Process LLM response
-        plan = json.loads(response)
-        
-        milestones = []
-        for milestone in plan["milestones"]:
-            tasks = []
-            for task in milestone["tasks"]:
-                tasks.append({
-                    "id": task["id"],
-                    "name": task["name"],
-                    "dependencies": task.get("dependencies", []),
-                    "effort": estimate_task_complexity(task["name"]),
+        # Step 3: Process response - no need for json.loads since response is already a dict
+        if isinstance(response, dict) and 'milestones' in response:
+            milestones = []
+            for milestone in response["milestones"]:
+                tasks = []
+                for task in milestone["tasks"]:
+                    tasks.append({
+                        "id": task["id"],
+                        "name": task["name"],
+                        "dependencies": task.get("dependencies", []),
+                        "effort": estimate_task_complexity(task["name"]),
+                    })
+                milestones.append({
+                    "name": milestone["name"], 
+                    "tasks": tasks
                 })
-            milestones.append({
-                "name": milestone["name"], 
-                "tasks": tasks
-            })
 
-        logger.info(f"Generated {len(milestones)} milestones with {sum(len(m['tasks']) for m in milestones)} tasks")
-        return milestones
+            logger.info(f"Generated {len(milestones)} milestones with {sum(len(m['tasks']) for m in milestones)} tasks")
+            return milestones
+        else:
+            logger.error("Response missing milestones key or invalid format")
+            return []
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse LLM response: {str(e)}", exc_info=True)
-        return []
     except Exception as e:
         logger.error(f"Error generating task breakdown: {str(e)}", exc_info=True)
         return []

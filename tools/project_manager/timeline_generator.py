@@ -1,8 +1,13 @@
 from core.logging.logger import setup_logger
 from typing import Dict, Any, List
+from core.tracing.service import trace_method
+
 
 logger = setup_logger("tools.project_manager.timeline")
 
+
+
+@trace_method
 def estimate_time(milestones: List[Dict[str, Any]], num_developers: int) -> int:
     """
     Estimate total project time based on workload.

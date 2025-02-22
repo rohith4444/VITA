@@ -4,7 +4,9 @@ import logging
 from typing import Dict, List, Any, Optional
 from ..base import BaseMemory, MemoryEntry, MemoryType
 from core.logging.logger import setup_logger
+from core.tracing.service import trace_class
 
+@trace_class
 class LongTermMemory(BaseMemory):
     """
     Implementation of long-term memory using PostgreSQL for persistent storage.
@@ -45,12 +47,29 @@ class LongTermMemory(BaseMemory):
             raise ValueError("Database connection string cannot be empty")
         
         try:
-            # Create connection pool
+            from urllib.parse import urlparse
+
+            # Parse the DSN string
+            url = urlparse(dsn)
+            username = url.username
+            password = url.password
+            database = url.path[1:]  # Remove leading '/'
+            hostname = url.hostname
+            port = url.port or 5432
+
+            logger.debug(f"Attempting connection to {hostname}:{port}/{database}")
+
+            # Create connection pool with explicit parameters
             pool = await asyncpg.create_pool(
-                dsn=dsn,
+                user=username,
+                password=password,
+                database=database,
+                host=hostname,
+                port=port,
                 min_size=5,
                 max_size=20,
-                command_timeout=60
+                command_timeout=60,
+                ssl=False
             )
             
             # Initialize instance
@@ -379,3 +398,53 @@ class LongTermMemory(BaseMemory):
         except Exception as e:
             self.logger.error(f"Error updating access stats: {str(e)}")
             # Don't raise - this is a non-critical operation
+
+    async def clear(self) -> bool:
+        """
+        Clear operation is not supported for long-term memory.
+        Returns False since this operation is not applicable.
+        
+        Returns:
+            bool: Always returns False
+        """
+        self.logger.warning("Attempt to clear long-term memory - operation not supported")
+        return False
+    
+    async def update(self, entry: MemoryEntry) -> bool:
+        """
+        Update an existing memory entry.
+        
+        Args:
+            entry: Updated memory entry
+            
+        Returns:
+            bool: Success status of the update operation
+        """
+        self.logger.info(f"Updating memory for agent {entry.agent_id}")
+        
+        try:
+            async with self.pool.acquire() as conn:
+                async with conn.transaction():
+                    result = await conn.execute("""
+                        UPDATE agent_memories 
+                        SET content = $1,
+                            metadata = $2,
+                            importance = $3,
+                            timestamp = $4
+                        WHERE agent_id = $5 
+                        AND memory_type = $6
+                    """,
+                        json.dumps(entry.content),
+                        json.dumps(entry.metadata) if entry.metadata else None,
+                        entry.metadata.get('importance', 0.0) if entry.metadata else 0.0,
+                        entry.timestamp,
+                        entry.agent_id,
+                        entry.memory_type.value
+                    )
+                    
+                    self.logger.info(f"Successfully updated memory for agent {entry.agent_id}")
+                    return True
+                    
+        except Exception as e:
+            self.logger.error(f"Error updating memory: {str(e)}", exc_info=True)
+            return False
