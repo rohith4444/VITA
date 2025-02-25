@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph
 from core.logging.logger import setup_logger
 from agents.core.monitoring.decorators import monitor_operation
 from agents.core.base_agent import BaseAgent
-from agents.core.llm.service import LLMService
+from agents.project_manager.llm.service import LLMService
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
 from .state_graph import ProjectManagerGraphState

@@ -1,8 +1,8 @@
 import json
 from core.logging.logger import setup_logger
 from typing import Dict, Any, List, Optional
-from agents.core.llm.service import LLMService
-from agents.core.llm.prompts import format_project_plan_prompt
+from agents.project_manager.llm.service import LLMService
+from agents.project_manager.llm.prompts import format_project_plan_prompt
 from .task_estimator import estimate_task_complexity
 from core.tracing.service import trace_method
 
