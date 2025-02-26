@@ -1,6 +1,5 @@
 .main-container {
-    min-height: 100%;
-    padding: 2rem;
+    padding: 2rem 12rem;
     overflow: scroll;
 }
 
@@ -21,28 +20,6 @@
     margin: 0px;
 }
 
-.main-container-input-container {
-    margin-top: 2rem;
-    padding: 2rem;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    border-radius: 1rem;
-}
-
-.main-container-input-text {
-    width: 100%;
-    font-size: 16px;
-    padding: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 0.5rem;
-    outline: none;
-}
-
-.main-container-input-meta {
-    margin-top: 1rem;
-    color: #666;
-    text-align: left;
-}
-
 .main-container-button-group {
     margin-top: 1rem;
     display: flex;
@@ -60,16 +37,27 @@
     margin-top: 3rem;
 }
 
+.main-container-recent-chats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .main-container-recent-chats-title {
     font-size: 18px;
     font-weight: bold;
     color: #555;
+    text-align: left;
 }
 
 .main-container-recent-chats-grid {
     margin-top: 1rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    /* display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); */
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
     gap: 12px;
 }
 
@@ -81,11 +69,13 @@
     flex-direction: column;
     align-items: left;
     justify-content: left;
+    width: 45%;
 }
 
 .main-container-recent-card-heading {
     font-size: 14px;
     margin: 0px 8px;
+    text-align: left;
 }
 
 .main-container-recent-card-time {

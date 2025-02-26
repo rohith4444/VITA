@@ -8,7 +8,7 @@ const StyledLinkV1 = styled(Link)(({ theme }) => ({
     display: 'flex',
     alignItems: 'center',
     textDecoration: 'none',
-    // color: props.version == 'v1' ? theme.palette.primary : theme.palette.secondary
+    // color: props.version === 'v1' ? theme.palette.primary : theme.palette.secondary
 }));
 
 const StyledLinkV2 = styled(Link)(({ theme }) => ({
@@ -20,9 +20,9 @@ const StyledLinkV2 = styled(Link)(({ theme }) => ({
 
 export default function CustomLink({ ...props }) {
     var className = props.version + " ";
-    if (props.version == "v1") {
+    if (props.version === "v1") {
         return (<StyledLinkV1 {...props}>{props.children}<Icon>{props.icon}</Icon></StyledLinkV1>);
-    } else if (props.version == 'v2') {
+    } else if (props.version === 'v2') {
         return (<StyledLinkV2 {...props}>{props.children}<Icon>{props.icon}</Icon></StyledLinkV2>);
     }
 }

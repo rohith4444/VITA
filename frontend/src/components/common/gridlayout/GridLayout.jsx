@@ -3,7 +3,7 @@ import './gridlayout.css';
 import CustomButton from "../button/CustomButton";
 
 const GridLayout = ({ heading1, heading2, desc, btnVersion,  ...props }) => {
-    if (btnVersion == null) {
+    if (btnVersion === null) {
         btnVersion = 'v1'
     }
     return (

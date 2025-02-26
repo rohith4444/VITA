@@ -15,7 +15,7 @@ function App() {
     <div className="App">
       <div class="container">
         <BrowserRouter>
-          <Header />
+          {/* <Header /> */}
           <Routes>
             <Route path="/" element={<Main />} />
             {/* <Route index element={<Home />} /> */}

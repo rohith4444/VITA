@@ -1,0 +1,62 @@
+
+.main-container-input-container {
+    /* margin-top: 2rem; */
+    padding: 1rem;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 1rem;
+}
+
+.main-container-input-text {
+    width: 100%;
+    font-size: 16px;
+    border-radius: 0.5rem;
+    outline: none;
+}
+
+.min-container-input-meta {
+    display: flex;
+    flex-direction: row;
+    margin-top: 1rem;
+    color: #666;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.min-container-input-meta-choose {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+}
+
+.min-container-input-meta-choose-item {
+    text-decoration: none;
+    cursor: pointer;
+    color: #666;
+}
+
+.min-container-input-meta-send-message {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.main-container-input-container-files {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    margin-bottom: 1rem;
+    max-height: 5rem;
+    overflow: scroll;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.input-file-name {
+    display: flex;
+    width: 45%;
+    flex-direction: row;
+    justify-content: space-between;
+}

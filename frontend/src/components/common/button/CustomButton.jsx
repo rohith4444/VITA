@@ -38,10 +38,10 @@ const ButtonV1 = styled.button`
 export default function CustomButton({ version, ...props }) {
     var className = version + " ";
     className = className + props.variant;
-    if (version == "v1") {
+    if (version === "v1") {
         return <ButtonV1 {...props}>{props.children}</ButtonV1>
     }
-    if (version == "v2") {
+    if (version === "v2") {
         return <ButtonV2 {...props}>{props.children}</ButtonV2>
     }
     return (<Button className={className} {...props}>{props.children}</Button>);

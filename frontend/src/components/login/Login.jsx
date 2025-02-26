@@ -13,7 +13,6 @@ const Login = () => {
   const [tabValue, setTabValue] = useState("login");
 
   const handleTabValueChange = (event, newValue) => {
-    console.log(event.target);
     setTabValue(newValue);
   }
 

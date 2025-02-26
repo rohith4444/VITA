@@ -1,0 +1,89 @@
+.individual-project-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+}
+
+.individual-project-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+}
+
+.individual-project-back {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.individual-project-menu {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.individual-project-body {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 12rem;
+}
+
+.individual-project-name {
+    text-align: left;
+    margin: 0px;
+}
+
+.individual-project-recent-chats-container {
+    margin-top: 1rem;
+}
+
+.individual-project-recent-chats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.individual-project-recent-chats-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #555;
+    text-align: left;
+}
+
+.individual-project-recent-chats-grid {
+    margin-top: 0rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    /* grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); */
+    gap: 12px;
+    justify-content: space-between;
+
+}
+
+.individual-project-recent-chats-card {
+    padding: 1rem;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    /* flex: 1; */
+    align-items: left;
+    justify-content: left;
+    width: 45%;
+}
+
+.individual-project-recent-card-heading {
+    font-size: 14px;
+    margin: 0px 8px;
+    text-align: left;
+}
+
+.individual-project-recent-card-time {
+    text-align: right;
+    font-size: 10px;
+}
