@@ -48,7 +48,22 @@ def signal_handler(signum, frame):
     shutdown_event.set()
 
 @trace_method
-async def run_qa_test_agent(input_data: Dict[str, Any]) -> Dict[str, Any]:
+async def run_qa_test_agent(
+    input_data: Dict[str, Any], 
+    programming_language: str = None,
+    test_framework: str = None
+) -> Dict[str, Any]:
+    """
+    Run the QA/Test Agent to generate tests for the provided code.
+    
+    Args:
+        input_data: Input containing code, specifications, and description
+        programming_language: Optional programming language preference
+        test_framework: Optional testing framework preference
+        
+    Returns:
+        Dict[str, Any]: Test results including test cases and test code
+    """
     memory_manager = None
     qa_test_agent = None
     
@@ -65,6 +80,15 @@ async def run_qa_test_agent(input_data: Dict[str, Any]) -> Dict[str, Any]:
             memory_manager=memory_manager
         )
         logger.info(f"QA/Test Agent initialized with ID: {agent_id}")
+
+        # Add language and framework preferences if provided
+        if programming_language:
+            input_data["programming_language"] = programming_language
+            logger.info(f"Using specified programming language: {programming_language}")
+            
+        if test_framework:
+            input_data["test_framework"] = test_framework
+            logger.info(f"Using specified test framework: {test_framework}")
 
         async with qa_test_agent:
             # Run the agent
@@ -98,12 +122,55 @@ async def run_qa_test_agent(input_data: Dict[str, Any]) -> Dict[str, Any]:
             except Exception as e:
                 logger.error(f"Error during memory cleanup: {str(e)}", exc_info=True)
 
+def save_test_files(result: Dict[str, Any], output_dir: str = "generated_tests"):
+    """
+    Save generated test files to the filesystem.
+    
+    Args:
+        result: Result from QA/Test Agent
+        output_dir: Directory to save test files
+    """
+    if "test_code" not in result or not result["test_code"]:
+        logger.warning("No test code found in results")
+        return
+        
+    # Create output directory if it doesn't exist
+    out_path = Path(output_dir)
+    out_path.mkdir(exist_ok=True, parents=True)
+    
+    # Save each test file
+    test_code = result["test_code"]
+    file_count = 0
+    
+    for filename, content in test_code.items():
+        file_path = out_path / filename
+        
+        # Ensure parent directories exist for the file
+        file_path.parent.mkdir(exist_ok=True, parents=True)
+        
+        # Write the file
+        with open(file_path, 'w') as f:
+            f.write(content)
+            
+        file_count += 1
+        logger.info(f"Saved test file: {file_path}")
+        
+    logger.info(f"Saved {file_count} test files to {out_path}")
+
 @trace_method
 async def main():
     try:
         # Setup signal handlers in a cross-platform way
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
+
+        # Parse command line arguments
+        import argparse
+        parser = argparse.ArgumentParser(description='Run QA/Test Agent')
+        parser.add_argument('--lang', '-l', help='Programming language')
+        parser.add_argument('--framework', '-f', help='Testing framework')
+        parser.add_argument('--output', '-o', default='generated_tests', help='Output directory for test files')
+        args = parser.parse_args()
 
         # Sample input data
         sample_code = {
@@ -248,15 +315,30 @@ async def main():
             "specifications": sample_specifications
         }
 
-        result = await run_qa_test_agent(input_data)
+        # Run QA/Test Agent
+        result = await run_qa_test_agent(
+            input_data, 
+            programming_language=args.lang,
+            test_framework=args.framework
+        )
         
         if result:
-            print("\nFinal QA/Test Results:")
-            try:
-                print(json.dumps(result, indent=2))
-            except TypeError as e:
-                logger.error(f"Error serializing result: {str(e)}")
-                print("Raw result:", result)
+            print("\nQA/Test Agent Execution Completed Successfully")
+            
+            # Save test files
+            save_test_files(result, args.output)
+            
+            # Print summary
+            if "test_code" in result:
+                print(f"\nGenerated {len(result['test_code'])} test files")
+                print(f"Files saved to: {args.output}")
+                
+                # Print filenames
+                print("\nGenerated test files:")
+                for filename in result['test_code'].keys():
+                    print(f"- {filename}")
+            else:
+                print("No test code was generated")
         else:
             print("No result received from QA/Test agent")
             

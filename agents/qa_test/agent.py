@@ -12,6 +12,7 @@ from .llm.service import QATestLLMService
 from tools.qa_test.test_analyzer import analyze_test_requirements
 from tools.qa_test.test_planner import create_test_plan, prioritize_tests
 from tools.qa_test.test_generator import generate_test_cases
+from tools.qa_test.test_code_generator import generate_test_code
 from core.tracing.service import trace_class
 
 @trace_class
@@ -47,12 +48,14 @@ class QATestAgent(BaseAgent):
             graph.add_node("analyze_requirements", self.analyze_test_requirements)
             graph.add_node("plan_tests", self.plan_tests)
             graph.add_node("generate_test_cases", self.generate_test_cases)
+            graph.add_node("generate_test_code", self.generate_test_code)  # New node
 
             # Add edges
             self.logger.debug("Adding graph edges")
             graph.add_edge("start", "analyze_requirements")
             graph.add_edge("analyze_requirements", "plan_tests")
             graph.add_edge("plan_tests", "generate_test_cases")
+            graph.add_edge("generate_test_cases", "generate_test_code")  # New edge
             
             # Set entry point
             graph.set_entry_point("start")
@@ -84,6 +87,10 @@ class QATestAgent(BaseAgent):
                 self.logger.warning("No specifications provided, will proceed with minimal specifications")
                 input_data["specifications"] = {}
             
+            # Get language and framework preferences if provided
+            programming_language = input_data.get("programming_language", None)
+            test_framework = input_data.get("test_framework", None)
+            
             # Execute graph
             self.logger.debug("Starting graph execution")
             result = await self.graph.ainvoke({
@@ -93,6 +100,9 @@ class QATestAgent(BaseAgent):
                 "test_requirements": {},
                 "test_plan": {},
                 "test_cases": {},
+                "test_code": {},
+                "programming_language": programming_language,
+                "test_framework": test_framework,
                 "status": "initialized"
             })
             
@@ -395,12 +405,98 @@ class QATestAgent(BaseAgent):
             self.logger.error(f"Error in generate_test_cases: {str(e)}", exc_info=True)
             raise
     
+    
+    @monitor_operation(operation_type="generate_test_code",
+                    metadata={"phase": "code_generation"})
+    async def generate_test_code(self, state: QATestGraphState) -> Dict[str, Any]:
+        """Generates executable test code based on test cases."""
+        self.logger.info("Starting generate_test_code phase")
+        self.logger.debug(f"Received state: {state}")
+        
+        try:
+            test_cases = state["test_cases"]
+            code = state["code"]
+            test_requirements = state["test_requirements"]
+            programming_language = state.get("programming_language")
+            test_framework = state.get("test_framework")
+            
+            # Check working memory for similar previous test code
+            previous_code = await self.memory_manager.retrieve(
+                agent_id=self.agent_id,
+                memory_type=MemoryType.WORKING,
+                query={"type": "test_code"}
+            )
+            self.logger.debug(f"Found previous test code: {len(previous_code)}")
+            
+            if previous_code:
+                self.logger.info("Using previous test code from working memory")
+                test_code = previous_code[0].content.get("test_code", {})
+            else:
+                self.logger.info("Generating new test code")
+                
+                # Generate test code
+                test_code = await generate_test_code(
+                    test_cases=test_cases,
+                    code=code,
+                    programming_language=programming_language,
+                    test_framework=test_framework,
+                    llm_service=self.llm_service
+                )
+                
+                self.logger.debug(f"Generated test code with {len(test_code)} files")
+                
+                # Store in working memory
+                working_memory_entry = {
+                    "type": "test_code",
+                    "test_code": test_code,
+                    "generation_timestamp": datetime.utcnow().isoformat()
+                }
+                self.logger.debug(f"Storing in working memory: {working_memory_entry}")
+                
+                await self.memory_manager.store(
+                    agent_id=self.agent_id,
+                    memory_type=MemoryType.WORKING,
+                    content=working_memory_entry
+                )
+            
+            # Store in long-term memory
+            long_term_entry = {
+                "type": "test_code",
+                "test_cases": test_cases,
+                "test_code": test_code,
+                "programming_language": programming_language,
+                "test_framework": test_framework,
+                "generation_timestamp": datetime.utcnow().isoformat()
+            }
+            self.logger.debug(f"Storing in long-term memory: {long_term_entry}")
+            
+            await self.memory_manager.store(
+                agent_id=self.agent_id,
+                memory_type=MemoryType.LONG_TERM,
+                content=long_term_entry,
+                metadata={
+                    "type": "test_code",
+                    "importance": 0.9
+                }
+            )
+            
+            # Update state
+            state["test_code"] = test_code
+            state["status"] = "completed"
+            
+            self.logger.info(f"Test code generation completed with {len(test_code)} test files")
+            return state
+            
+        except Exception as e:
+            self.logger.error(f"Error in generate_test_code: {str(e)}", exc_info=True)
+            raise
+
     async def generate_report(self) -> Dict[str, Any]:
         """
         Generate a comprehensive report of the agent's activities and findings.
         
         Returns:
-            Dict[str, Any]: Report containing test analysis, planning, and test cases
+            Dict[str, Any]: Report containing test analysis, planning, test cases, and test code
         """
         self.logger.info("Starting report generation")
         self.logger.debug(f"Agent ID: {self.agent_id}, Current Status: {self.status}")
@@ -413,11 +509,11 @@ class QATestAgent(BaseAgent):
             )
             self.logger.debug(f"Retrieved working memory entries: {len(working_memory)}")
             
-            # Retrieve long-term memory for test cases
+            # Retrieve long-term memory for test code
             long_term_memory = await self.memory_manager.retrieve(
                 agent_id=self.agent_id,
                 memory_type=MemoryType.LONG_TERM,
-                query={"type": "test_cases"},
+                query={"type": "test_code"},
                 sort_by="timestamp",
                 limit=1
             )
@@ -427,6 +523,9 @@ class QATestAgent(BaseAgent):
             test_requirements = {}
             test_plan = {}
             test_cases = {}
+            test_code = {}
+            programming_language = None
+            test_framework = None
             
             # Extract data from working memory
             for entry in working_memory:
@@ -437,15 +536,21 @@ class QATestAgent(BaseAgent):
                     test_plan = content["test_plan"]
                 if "test_cases" in content:
                     test_cases = content["test_cases"]
+                if "test_code" in content:
+                    test_code = content["test_code"]
             
-            # If test cases not found in working memory, check long-term memory
-            if not test_cases and long_term_memory:
-                test_cases = long_term_memory[0].content.get("test_cases", {})
+            # If test code not found in working memory, check long-term memory
+            if not test_code and long_term_memory:
+                test_code = long_term_memory[0].content.get("test_code", {})
+                programming_language = long_term_memory[0].content.get("programming_language")
+                test_framework = long_term_memory[0].content.get("test_framework")
             
             # Generate summary statistics
             unit_test_count = len(test_cases.get("unit_test_cases", []))
             integration_test_count = len(test_cases.get("integration_test_cases", []))
             total_test_count = unit_test_count + integration_test_count
+            
+            test_code_files_count = len(test_code)
             
             functional_req_count = len(test_requirements.get("functional_test_requirements", []))
             integration_req_count = len(test_requirements.get("integration_test_requirements", []))
@@ -468,14 +573,20 @@ class QATestAgent(BaseAgent):
                         "unit": unit_test_count,
                         "integration": integration_test_count,
                         "total": total_test_count
+                    },
+                    "test_code": {
+                        "files": test_code_files_count,
+                        "programming_language": programming_language,
+                        "test_framework": test_framework
                     }
                 },
                 "test_requirements": test_requirements,
                 "test_plan": test_plan,
-                "test_cases": test_cases
+                "test_cases": test_cases,
+                "test_code": test_code
             }
             
-            self.logger.info(f"Report generation completed with {total_test_count} total test cases")
+            self.logger.info(f"Report generation completed with {total_test_count} test cases and {test_code_files_count} test code files")
             return report
             
         except Exception as e:

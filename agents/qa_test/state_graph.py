@@ -18,6 +18,7 @@ class QATestGraphState(TypedDict):
         test_requirements (Dict[str, Any]): Analyzed test requirements
         test_plan (Dict[str, Any]): Test planning details
         test_cases (Dict[str, Any]): Generated test cases
+        test_code (Dict[str, str]): Generated executable test code
         status (str): Current workflow status
     """
     input: str
@@ -26,7 +27,7 @@ class QATestGraphState(TypedDict):
     test_requirements: Dict[str, Any]
     test_plan: Dict[str, Any]
     test_cases: Dict[str, Any]
-    test_code: Dict[str, str]
+    test_code: Dict[str, str]  # New field for test code
     status: str
 
 def validate_state(state: Dict[str, Any]) -> bool:
@@ -48,7 +49,8 @@ def validate_state(state: Dict[str, Any]) -> bool:
             "analyzing_requirements": ["input", "code", "specifications", "status"],
             "planning_tests": ["input", "code", "specifications", "test_requirements", "status"],
             "generating_test_cases": ["input", "code", "specifications", "test_requirements", "test_plan", "status"],
-            "completed": ["input", "code", "specifications", "test_requirements", "test_plan", "test_cases", "status"]
+            "generating_test_code": ["input", "code", "specifications", "test_requirements", "test_plan", "test_cases", "status"],
+            "completed": ["input", "code", "specifications", "test_requirements", "test_plan", "test_cases", "test_code", "status"]
         }
         
         # Get current stage from status
@@ -78,6 +80,9 @@ def validate_state(state: Dict[str, Any]) -> bool:
             
         if "test_cases" in state and not isinstance(state["test_cases"], dict):
             raise TypeError("'test_cases' must be a dictionary")
+            
+        if "test_code" in state and not isinstance(state["test_code"], dict):
+            raise TypeError("'test_code' must be a dictionary")
             
         if not isinstance(state["status"], str):
             raise TypeError("'status' must be a string")
@@ -111,6 +116,7 @@ def create_initial_state(input_description: str, code: Dict[str, Any], specifica
             "test_requirements": {},
             "test_plan": {},
             "test_cases": {},
+            "test_code": {},  # Added empty test_code dictionary
             "status": "initialized"
         }
         
@@ -138,7 +144,8 @@ def get_next_stage(current_stage: str) -> str:
         "initialized": "analyzing_requirements",
         "analyzing_requirements": "planning_tests",
         "planning_tests": "generating_test_cases",
-        "generating_test_cases": "completed"
+        "generating_test_cases": "generating_test_code",  # Added new transition
+        "generating_test_code": "completed"  # New transition to completed
     }
     
     return stage_flow.get(current_stage, "completed")
