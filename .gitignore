@@ -24,3 +24,6 @@ logs/
 
 # System files
 .DS_Store
+
+# genrated files
+generated_tests/

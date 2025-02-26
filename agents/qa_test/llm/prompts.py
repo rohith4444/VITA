@@ -1,4 +1,6 @@
 from typing import Dict, List, Any
+import json
+
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method
 
@@ -395,3 +397,240 @@ def format_test_case_generation_prompt(
     except Exception as e:
         logger.error(f"Error formatting test case generation prompt: {str(e)}", exc_info=True)
         raise
+
+@trace_method
+def format_test_code_generation_prompt(
+    test_cases: Dict[str, Any], 
+    code: Dict[str, Any],
+    programming_language: str,
+    test_framework: str
+) -> str:
+    """
+    Format the prompt for generating executable test code.
+    
+    Args:
+        test_cases: Test case specifications
+        code: Code to be tested
+        programming_language: Target programming language
+        test_framework: Testing framework to use
+        
+    Returns:
+        str: Formatted prompt for the LLM
+    """
+    logger.debug("Formatting test code generation prompt")
+    
+    try:
+        # Extract unit test cases
+        unit_test_cases = test_cases.get("unit_test_cases", [])
+        unit_test_cases_str = json.dumps(unit_test_cases, indent=2)
+        
+        # Extract integration test cases
+        integration_test_cases = test_cases.get("integration_test_cases", [])
+        integration_test_cases_str = json.dumps(integration_test_cases, indent=2)
+        
+        # Format code components
+        code_samples = ""
+        for component_name, component_content in code.items():
+            # Handle different formats of code content
+            if isinstance(component_content, str):
+                code_text = component_content
+            elif isinstance(component_content, dict) and "content" in component_content:
+                code_text = component_content["content"]
+            else:
+                code_text = str(component_content)
+            
+            # Limit code length to avoid overwhelming the LLM
+            if len(code_text) > 2000:
+                code_text = code_text[:2000] + "...[truncated]"
+            
+            code_samples += f"\n\n// {component_name}\n{code_text}"
+        
+        # Framework-specific instructions
+        framework_instructions = get_framework_specific_instructions(programming_language, test_framework)
+        
+        # Example test for few-shot learning
+        example_test = get_example_test(programming_language, test_framework)
+
+        formatted_prompt = f"""
+        As a skilled test engineer, generate executable test code for the following test cases.
+        
+        PROGRAMMING LANGUAGE: {programming_language}
+        TESTING FRAMEWORK: {test_framework}
+        
+        CODE TO BE TESTED:
+        {code_samples}
+        
+        UNIT TEST CASES:
+        {unit_test_cases_str}
+        
+        INTEGRATION TEST CASES:
+        {integration_test_cases_str}
+        
+        FRAMEWORK-SPECIFIC INSTRUCTIONS:
+        {framework_instructions}
+        
+        EXAMPLE TEST:
+        {example_test}
+        
+        REQUIREMENTS:
+        1. Generate complete, executable test files
+        2. Follow best practices for {test_framework}
+        3. Properly mock dependencies
+        4. Include appropriate assertions for each test case
+        5. Group tests logically by component or functionality
+        6. Add helpful comments explaining the tests
+        
+        FORMAT YOUR RESPONSE AS JSON:
+        {{
+            "filename1.test.{get_file_extension(programming_language)}": "// Complete test file code here",
+            "filename2.test.{get_file_extension(programming_language)}": "// Complete test file code here"
+        }}
+        
+        Make sure each file contains the complete, valid code needed to run the tests. Do not truncate or use placeholders.
+        """
+        
+        logger.debug(f"Formatted prompt length: {len(formatted_prompt)} chars")
+        logger.info("Test code generation prompt formatted successfully")
+        return formatted_prompt
+        
+    except Exception as e:
+        logger.error(f"Error formatting test code generation prompt: {str(e)}", exc_info=True)
+        raise
+
+def get_framework_specific_instructions(language: str, framework: str) -> str:
+    """Get framework-specific instructions for the prompt."""
+    if language == "javascript" and framework == "jest":
+        return """
+        - Use Jest's describe() and test() or it() functions
+        - Use expect() with appropriate matchers
+        - Mock dependencies using jest.fn() or jest.mock()
+        - Use beforeEach() for test setup
+        - Use async/await for asynchronous tests
+        - Export nothing (tests are auto-discovered)
+        """
+    elif language == "python" and framework == "pytest":
+        return """
+        - Use pytest's function-based tests (def test_something())
+        - Use pytest fixtures for setup
+        - Use assert statements for verification
+        - Use the monkeypatch fixture for mocking
+        - Use pytest.mark decorators for categorization
+        - Use async/await with pytest.mark.asyncio for async tests
+        """
+    elif language == "python" and framework == "unittest":
+        return """
+        - Create test classes that inherit from unittest.TestCase
+        - Use setUp and tearDown methods for setup/cleanup
+        - Use self.assert* methods for verification
+        - Use unittest.mock for mocking
+        - Use async test methods with self.loop.run_until_complete
+        - Use if __name__ == '__main__': unittest.main() at the end
+        """
+    elif language == "java" and framework == "junit":
+        return """
+        - Use @Test annotation for test methods
+        - Use JUnit 5 assertions (assertEquals, assertTrue, etc.)
+        - Use @BeforeEach and @AfterEach for setup/cleanup
+        - Use @Mock annotation for mocking
+        - Use assertThrows for exception testing
+        - Create a test class for each component
+        """
+    else:
+        return f"Generate idiomatic test code for {framework} in {language}."
+
+def get_example_test(language: str, framework: str) -> str:
+    """Get an example test for few-shot learning."""
+    if language == "javascript" and framework == "jest":
+        return """
+        // UserService.test.js
+        jest.mock('../repositories/UserRepository');
+        
+        describe('UserService', () => {
+          let userService;
+          let mockUserRepository;
+          
+          beforeEach(() => {
+            mockUserRepository = {
+              findById: jest.fn(),
+              create: jest.fn(),
+              update: jest.fn(),
+              delete: jest.fn()
+            };
+            userService = new UserService(mockUserRepository);
+          });
+          
+          test('should create a user when valid data is provided', async () => {
+            // Arrange
+            const userData = { email: 'test@example.com', password: 'password123' };
+            mockUserRepository.create.mockResolvedValue({ id: '123', ...userData });
+            
+            // Act
+            const result = await userService.create(userData);
+            
+            // Assert
+            expect(mockUserRepository.create).toHaveBeenCalledWith(userData);
+            expect(result).toEqual({ id: '123', ...userData });
+          });
+          
+          test('should throw error when creating user without required fields', async () => {
+            // Arrange
+            const userData = { email: 'test@example.com' }; // Missing password
+            
+            // Act & Assert
+            await expect(userService.create(userData)).rejects.toThrow('Email and password are required');
+            expect(mockUserRepository.create).not.toHaveBeenCalled();
+          });
+        });
+        """
+    elif language == "python" and framework == "pytest":
+        return """
+        # test_user_service.py
+        import pytest
+        from unittest.mock import MagicMock
+        from app.services.user_service import UserService
+        
+        @pytest.fixture
+        def user_repository():
+            mock = MagicMock()
+            mock.find_by_id = MagicMock()
+            mock.create = MagicMock()
+            mock.update = MagicMock()
+            mock.delete = MagicMock()
+            return mock
+            
+        @pytest.fixture
+        def user_service(user_repository):
+            return UserService(user_repository)
+            
+        def test_create_user_with_valid_data(user_service, user_repository):
+            # Arrange
+            user_data = {"email": "test@example.com", "password": "password123"}
+            user_repository.create.return_value = {"id": "123", **user_data}
+            
+            # Act
+            result = user_service.create(user_data)
+            
+            # Assert
+            user_repository.create.assert_called_once_with(user_data)
+            assert result == {"id": "123", **user_data}
+            
+        def test_create_user_with_missing_data(user_service, user_repository):
+            # Arrange
+            user_data = {"email": "test@example.com"}  # Missing password
+            
+            # Act & Assert
+            with pytest.raises(ValueError, match="Email and password are required"):
+                user_service.create(user_data)
+            user_repository.create.assert_not_called()
+        """
+    else:
+        return "Example test not available for this language/framework combination."
+
+def get_file_extension(language: str) -> str:
+    """Get file extension for the programming language."""
+    if language == "python":
+        return "py"
+    elif language == "java":
+        return "java"
+    else:  # Default to JavaScript
+        return "js"

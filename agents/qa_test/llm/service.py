@@ -8,7 +8,8 @@ from agents.core.monitoring.decorators import monitor_llm, monitor_operation
 from .prompts import (
     format_test_requirements_analysis_prompt,
     format_test_planning_prompt,
-    format_test_case_generation_prompt
+    format_test_case_generation_prompt,
+    format_test_code_generation_prompt
 )
 
 @trace_class
@@ -295,4 +296,117 @@ class QATestLLMService:
             
         except Exception as e:
             self.logger.error(f"Error in test case generation: {str(e)}", exc_info=True)
+            raise
+
+    @monitor_llm(
+        run_name="generate_test_code",
+        metadata={
+            "operation_details": {
+                "prompt_template": "test_code_generation",
+                "max_tokens": 3000,
+                "temperature": 0.3,
+                "response_format": "structured_code"
+            }
+        }
+    )
+    async def generate_test_code(
+        self, 
+        test_cases: Dict[str, Any], 
+        code: Dict[str, Any],
+        programming_language: str,
+        test_framework: str
+    ) -> Dict[str, str]:
+        """
+        Generate executable test code based on test cases.
+        
+        Args:
+            test_cases (Dict[str, Any]): Test case specifications
+            code (Dict[str, Any]): Code to be tested
+            programming_language (str): Target programming language (e.g., "javascript", "python")
+            test_framework (str): Testing framework to use (e.g., "jest", "pytest")
+            
+        Returns:
+            Dict[str, str]: Dictionary of test file names and their contents
+            
+        Raises:
+            Exception: If code generation fails
+        """
+        self.logger.info(f"Starting test code generation for {programming_language} using {test_framework}")
+        
+        try:
+            formatted_prompt = format_test_code_generation_prompt(
+                test_cases=test_cases,
+                code=code,
+                programming_language=programming_language,
+                test_framework=test_framework
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": f"You are a skilled QA engineer with expertise in writing test code using {test_framework} for {programming_language}."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=3000
+            )
+
+            # Parse response into test code files
+            test_code_files = await self._parse_test_code_response(response_content)
+            
+            self.logger.info(f"Test code generation completed successfully with {len(test_code_files)} test files")
+
+            return test_code_files
+            
+        except Exception as e:
+            self.logger.error(f"Error in test code generation: {str(e)}", exc_info=True)
+            raise
+
+    @monitor_operation(
+        operation_type="llm_test_code_parsing",
+        include_in_parent=True
+    )
+    async def _parse_test_code_response(self, response: str) -> Dict[str, str]:
+        """
+        Parse the test code response from LLM.
+        
+        Args:
+            response (str): Raw response from LLM
+            
+        Returns:
+            Dict[str, str]: Dictionary of test file names and their contents
+            
+        Raises:
+            ValueError: If response cannot be parsed as valid JSON
+            ValueError: If response format is not as expected
+        """
+        self.logger.debug("Parsing test code response")
+        
+        try:
+            # Strip any non-JSON content at the beginning or end
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            
+            if json_start == -1 or json_end == 0:
+                raise ValueError("No JSON object found in response")
+                
+            json_str = response[json_start:json_end]
+            
+            # Parse the JSON
+            test_code_files = json.loads(json_str)
+            
+            # Validate the format
+            if not isinstance(test_code_files, dict):
+                raise ValueError("Response is not a dictionary of test files")
+                
+            for filename, content in test_code_files.items():
+                if not isinstance(content, str):
+                    raise ValueError(f"Test file content for {filename} is not a string")
+                    
+            self.logger.debug(f"Successfully parsed {len(test_code_files)} test files from response")
+            return test_code_files
+            
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse test code response as JSON: {str(e)}", exc_info=True)
+            raise ValueError(f"Failed to parse test code response as JSON: {str(e)}")
+        except Exception as e:
+            self.logger.error(f"Error parsing test code response: {str(e)}", exc_info=True)
             raise
