@@ -1,138 +1,130 @@
 import React, { useEffect, useRef, useState } from "react";
 import './vitaloginpage.css';
-import MenuIcon from '@mui/icons-material/Menu';
 import Main from "./components/main/Main";
-import { AccountTree, KeyboardArrowUp, KeyboardArrowDown, AddCircleOutline, Schedule, Home, SupportAgent } from '@mui/icons-material';
+import { FolderOutlined, BookmarkBorderOutlined, KeyboardArrowLeft, KeyboardArrowRight, AddCircleOutline, Schedule, ChatOutlined } from '@mui/icons-material';
 import Project from "./components/projects/Project";
 import ChatInterface from "../chat-interface/ChatInterface";
+import AllChats from "./components/allchats/AllChats";
+import Chat from "./components/chat/Chat";
+import IndividualProject from "./components/projects/IndividualProject";
 
 const STATES = {
     MAIN: 'main',
+    ALL_PROJECTS: 'all_projects',
     PROJECT: 'project',
-    RECENT: 'recent'
-}
+    RECENT: 'recent',
+    ALL_CHATS: 'all_chats',
+    CHAT: 'chat'
+};
 
 const VitaLoginPage = () => {
-    const [chatId, setChatId] = useState("");
-    const [sidebarVisible, setSidebarVisible] = useState(true);
-    const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
-    const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
+    const [sidebarExpanded, setSidebarExpanded] = useState(true);
     const [state, setState] = useState(STATES.MAIN);
-    const [newProject, setNewProject] = useState(false);
-
+    const [projectsHovered, setProjectsHovered] = useState(false);
+    const [chatsHovered, setChatsHovered] = useState(false);
+    const [isRecentChats, setIsRecentChats] = useState(false);
     const [messages, setMessages] = useState([]);
+
     const lastMessageRef = useRef(null);
+    const chatBoxRef = useRef(null);
 
     useEffect(() => {
-        if (lastMessageRef.current) {
-          lastMessageRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        if (chatBoxRef.current) {
+            chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
         }
     }, [messages]);
 
-    const getAllMessages = (chatId) => {
-        if (chatId.trim()) {
-            setMessages([{ text: chatId, sender: "user" }]);
-            setTimeout(() => {
-              setMessages((prevMessages) => [...prevMessages, { text: "This is a bot response", sender: "bot" }]);
-            }, 1000);
-          }
-    }
+    const handleMouseEnterProjects = () => {
+        setProjectsHovered(true);
+    };
 
-    const sendMessage = (input) => {
-        if (input.trim()) {
-          setMessages((prevMessages) => [...prevMessages, { text: input, sender: "user" }]);
-          setTimeout(() => {
-            setMessages((prevMessages) => [...prevMessages, { text: "This is a bot response", sender: "bot" }]);
-          }, 1000);
-        }
+    const handleMouseLeaveProjects = () => {
+        setProjectsHovered(false);
+    };
+
+    const handleMouseEnterChats = () => {
+        setChatsHovered(true);
+    };
+
+    const handleMouseLeaveChats = () => {
+        setChatsHovered(false);
     };
 
     return (
         <>
-            {/* <Header /> */}
             <div className="chatbot-container">
-                <div className={`sidebar ${sidebarVisible ? "visible" : ""}`}>
-                    <button className="close-sidebar" onClick={() => setSidebarVisible(false)}>✖</button>
-                    <div className="options-container">
-                        <nav className="sidebar-nav">
-                            <div className="sidebar-navItem">
-                                <div className="sidebar-navitem-icon-text" onClick={() => {setState(STATES.MAIN)}}>
-                                    <SupportAgent /> Agents
-                                    {isAgentsExpanded ? 
-                                        <KeyboardArrowUp onClick={(event) => {event.stopPropagation();setIsAgentsExpanded(!isAgentsExpanded)}} /> : 
-                                        <KeyboardArrowDown onClick={(event) => {event.stopPropagation();setIsAgentsExpanded(!isAgentsExpanded)}} />
-                                    }
-                                </div>
-                                <AddCircleOutline onClick={(event) => {event.stopPropagation();setNewProject(!newProject);setState(STATES.PROJECT)}}/>
-                            </div>
-                            {isAgentsExpanded && (
-                                <div className="sidebar-project-list">
-                                    <a href="#" className="sidebar-project-item"> Agent-1</a>
-                                    <a href="#" className="sidebar-project-item"> Agent-2</a>
-                                    <a href="#" className="sidebar-project-item"> Agent-3</a>
-                                </div>
-                            )}
-                            <div className="sidebar-navItem" onClick={() => {setNewProject(false);setState(STATES.PROJECT)}}>
-                                <div className="sidebar-navitem-icon-text">
-                                    <AccountTree /> 
-                                    Projects 
-                                    {isProjectsExpanded ? 
-                                        <KeyboardArrowUp onClick={(event) => {event.stopPropagation();setIsProjectsExpanded(!isProjectsExpanded)}} /> : 
-                                        <KeyboardArrowDown onClick={(event) => {event.stopPropagation();setIsProjectsExpanded(!isProjectsExpanded)}} />
-                                    }
-                                </div>
-                                <AddCircleOutline onClick={(event) => {event.stopPropagation();setNewProject(!newProject);setState(STATES.PROJECT)}}/>
-                            </div>
-                            {isProjectsExpanded && (
-                                <div className="sidebar-project-list">
-                                    <a href="#" className="sidebar-project-item"> Project-1</a>
-                                    <a href="#" className="sidebar-project-item"> Project-2</a>
-                                    <a href="#" className="sidebar-project-item"> Project-3</a>
-                                </div>
-                            )}
-                            {/* <a href="#" style={styles.navItem}><Bookmark /> Saved</a>
-                            <a href="#" style={styles.navItem}><Settings /> Settings</a> */}
-                            <div className="sidebar-navItem margin-top-2rem">
-                                <div className="sidebar-navitem-icon-text sidebar-navItem">
-                                    <Schedule /> Recent Chats
-                                </div>
-                            </div>
-                            <div className="sidebar-project-list">
-                                <a className="sidebar-project-item"
-                                    onClick={() => {setState(STATES.RECENT);getAllMessages("Project-1");setChatId("Project-1");}}>
-                                    Project-1
-                                </a>
-                                <a className="sidebar-project-item"
-                                    onClick={() => {setState(STATES.RECENT);getAllMessages("Project-2");setChatId("Project-2");}}>
-                                    Project-2
-                                </a>
-                                <a className="sidebar-project-item"
-                                    onClick={() => {setState(STATES.RECENT);getAllMessages("Project-3");setChatId("Project-3");}}>
-                                    Project-3
-                                </a>
-                            </div>
-                        </nav>
-                        <div className="sidebar-profile-section">
-                            <div className="sidebar-profile-icon">FL</div>
-                            <div className="sidebar-profile-name">Firstname Lastname</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="chatbox">
-                    <div className="chat-header">
-                        <button className="menu-button" onClick={() => setSidebarVisible(!sidebarVisible)}>
-                            <MenuIcon size={24} />
+                <div className={`sidebar ${sidebarExpanded ? "expanded" : "collapsed"}`}>
+                    <div className="sidebar-header">
+                        <h2 className="sidebar-heading">
+                            {sidebarExpanded ? "VITA" : "V"}
+                        </h2>
+                        <button className="menu-button" onClick={() => setSidebarExpanded(!sidebarExpanded)}>
+                            {sidebarExpanded ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
                         </button>
                     </div>
-                    {STATES.MAIN == state && <Main />}
-                    {STATES.PROJECT == state && <Project newProject={newProject} />}
-                    {/* {STATES.RECENT == state && <></>} */}
-                    {STATES.RECENT == state && 
-                    <ChatInterface messages={messages} lastMessageRef={lastMessageRef} chatId={chatId} sendMessage={sendMessage} />}
+                    <nav className="sidebar-nav">
+                        <div className="sidebar-navItem" onClick={() => setState(STATES.MAIN)} onMouseEnter={handleMouseEnterChats} onMouseLeave={handleMouseLeaveChats}>
+                            <div className="sidebar-navitem-icon-text">
+                                <ChatOutlined />
+                                {sidebarExpanded && "New Chat"}
+                            </div>
+                            {chatsHovered && <AddCircleOutline />}
+                        </div>
+                        <div className="sidebar-navItem" onClick={() => setState(STATES.ALL_PROJECTS)} onMouseEnter={handleMouseEnterProjects} onMouseLeave={handleMouseLeaveProjects}>
+                            <div className="sidebar-navitem-icon-text">
+                                <FolderOutlined />
+                                {sidebarExpanded && "Projects"}
+                            </div>
+                            {projectsHovered && <AddCircleOutline />}
+                        </div>
+                        <div className="sidebar-navItem">
+                            <div className="sidebar-navitem-icon-text">
+                                <BookmarkBorderOutlined />
+                                {sidebarExpanded && "Favorites"}
+                            </div>
+                        </div>
+                        {sidebarExpanded && <div className="sidebar-project-list">
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-1</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-2</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-3</a>
+                            <a href="#" className="last" onClick={() => { setState(STATES.ALL_CHATS); setIsRecentChats(false); }}>view all</a>
+                        </div>}
+                        <div className="sidebar-navItem">
+                            <div className="sidebar-navitem-icon-text">
+                                <Schedule />
+                                {sidebarExpanded && "Recent Chats"}
+                            </div>
+                        </div>
+                        {sidebarExpanded && <div className="sidebar-project-list">
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-1</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-2</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-3</a>
+                            <a href="#" className="last" onClick={() => { setState(STATES.ALL_CHATS); setIsRecentChats(true); }}>view all</a>
+                        </div>}
+                    </nav>
+                    <div className="sidebar-profile-section">
+                        <div className="sidebar-profile-icon">FL</div>
+                        {sidebarExpanded && <div className="sidebar-profile-name">Firstname Lastname</div>}
+                    </div>
+                </div>
+                <div className="chatbox" ref={chatBoxRef}>
+                    {state === STATES.MAIN && <Main />}
+                    {state === STATES.PROJECT &&
+                        <IndividualProject
+                            setStateAllProjects={() => setState(STATES.ALL_PROJECTS)}
+                            setStateChat={() => setState(STATES.CHAT)}
+                        />
+                    }
+                    {state === STATES.ALL_PROJECTS &&
+                        <Project setStateProject={() => setState(STATES.PROJECT)} />
+                    }
+                    {state === STATES.RECENT &&
+                        <ChatInterface messages={messages} lastMessageRef={lastMessageRef} />
+                    }
+                    {state === STATES.CHAT && <Chat />}
+                    {state === STATES.ALL_CHATS && <AllChats isRecentChats={isRecentChats} />}
                 </div>
             </div>
-            {/* <Footer /> */}
         </>
     );
 }

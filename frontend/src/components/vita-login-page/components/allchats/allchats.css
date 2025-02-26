@@ -1,0 +1,38 @@
+.allchats {
+    padding: 2rem 12rem;
+    overflow: scroll;
+}
+
+.allchats_header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.allchats_container {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.chat_card {
+    padding: 1rem;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    justify-content: left;
+}
+
+.chat_card_heading {
+    font-size: 14px;
+    margin: 0px 8px;
+}
+
+.chat_card_time {
+    text-align: right;
+    font-size: 10px;
+}
