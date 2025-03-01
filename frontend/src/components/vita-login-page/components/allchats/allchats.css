@@ -12,9 +12,12 @@
 
 .allchats_container {
     margin-top: 1rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    display: flex;
+    /* grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); */
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 12px;
+    justify-content: space-between;
 }
 
 .chat_card {
@@ -25,14 +28,25 @@
     flex-direction: column;
     align-items: left;
     justify-content: left;
+    width: 45%;
 }
 
 .chat_card_heading {
     font-size: 14px;
     margin: 0px 8px;
+    text-align: left;
 }
 
 .chat_card_time {
     text-align: right;
     font-size: 10px;
+}
+
+@media (max-width: 1000px) {
+    .allchats {
+        padding: 1rem;
+    }
+    .chat_card {
+        width: 100%;
+    }
 }

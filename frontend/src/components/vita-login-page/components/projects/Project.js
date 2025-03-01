@@ -58,7 +58,7 @@ const Project = ({ setStateProject, ...props }) => {
                     />
                 </div>
                 <div className="right-search-project">
-                    <CustomButton><Tune />&nbsp;&nbsp;Filters</CustomButton>
+                    <CustomButton><Tune fontSize="small" />&nbsp;&nbsp;Filters</CustomButton>
                 </div>
             </div>
             <div className="recent-projects">
@@ -70,7 +70,7 @@ const Project = ({ setStateProject, ...props }) => {
                     </div>
                 ))} */}
                 {projects.map((project, index) => (
-                    <div className="project-card" key={index} onClick={setStateProject}>
+                    <div className="project-card card" key={index} onClick={setStateProject}>
                         <h3 className="project-title">{project.title}</h3>
                         <p className="project-description">{project.description}</p>
                         <p className="project-updated">Updated {project.updated}</p>

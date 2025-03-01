@@ -13,15 +13,15 @@
     border-bottom: 1px solid lightgray;
 }
 
+.chat-heading-name {
+    margin: 0.5rem 0px;
+}
+
 .chat-heading-icons {
     display: flex;
     gap: 0.5rem;
     justify-content: center;
     align-items: center;
-}
-
-.chat-header h2 {
-    color: black;
 }
 
 .save-icon {
@@ -35,30 +35,87 @@
     width: 100%;
 }
 
+/* Chat Messages Container */
 .chat-messages-container {
     display: flex;
-    /* justify-content: flex-end; */
-    /* align-items: center; */
     flex-direction: column;
+    height: 100%; /* Ensure it fills the parent */
+    width: 100%;
 }
 
+/* When the editor is open, give more space */
 .messages-editor-open {
-    flex: 4;
+    flex: 5;
+    padding: 0px 0.5rem;
 }
 
+/* When the editor is closed, keep padding */
 .messages-editor-close {
     padding: 0px 12rem;
     flex: auto;
 }
 
+.paddingless {
+    padding: 0px 2rem;
+}
+
+/* Chat Messages List */
 .chat-messages {
-    overflow: scroll;
+    overflow-y: auto; /* Enable vertical scrolling */
+    flex-grow: 1; /* Allow it to take remaining space */
+    max-height: 70vh; 
     display: flex;
-    flex: 20;
-    /* flex: auto; */
+    flex-direction: column;
+    padding: 10px;
+}
+
+/* Individual Message Styling */
+.message {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+
+/* Sent Messages (User) */
+.sent {
+    background-color: var(--text-secondary-light);
+    color: var(--card-bg);
+    align-self: flex-end;
+}
+
+/* Received Messages (Bot or Other User) */
+.received {
+    background-color: var(--chat-recieved-bg);
+    color: var(--primary-green);
+    align-self: flex-start;
+}
+
+.divider {
+    width: 5px;
+    cursor: ew-resize; /* Horizontal resize cursor */
+    background-color: gray;
+    /* transition: background 0.2s ease-in-out; */
 }
 
 .code-editor {
     display: flex;
     flex: 6;
+    /* border: 0.5px solid gray; */
+    /* margin-left: 1rem; */
+    border-radius: 1rem;
+}
+
+
+@media (max-width: 1200px) {
+    .messages-editor-close {
+        padding: 0px 6rem;
+    }
+}
+
+@media (max-width: 800px) {
+    .messages-editor-close {
+        padding: 0px 1rem;
+    }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import './vitaloginpage.css';
 import Main from "./components/main/Main";
-import { FolderOutlined, BookmarkBorderOutlined, KeyboardArrowLeft, KeyboardArrowRight, AddCircleOutline, Schedule, ChatOutlined } from '@mui/icons-material';
+import { ArrowForwardRounded, FolderOutlined, BookmarkBorderOutlined, KeyboardDoubleArrowLeftRounded, KeyboardDoubleArrowRightRounded, AddCircleOutline, Schedule, ChatOutlined } from '@mui/icons-material';
 import Project from "./components/projects/Project";
 import ChatInterface from "../chat-interface/ChatInterface";
 import AllChats from "./components/allchats/AllChats";
@@ -17,13 +17,20 @@ const STATES = {
     CHAT: 'chat'
 };
 
-const VitaLoginPage = () => {
+const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props }) => {
+    if (!defaultState) {
+        defaultState = STATES.MAIN
+    }
+
+    const [chatId, setChatId] = useState(defaultChatId);
+    const [projectId, setProjectId] = useState(defaultProjectId);
     const [sidebarExpanded, setSidebarExpanded] = useState(true);
-    const [state, setState] = useState(STATES.MAIN);
+    const [state, setState] = useState(defaultState);
     const [projectsHovered, setProjectsHovered] = useState(false);
     const [chatsHovered, setChatsHovered] = useState(false);
     const [isRecentChats, setIsRecentChats] = useState(false);
     const [messages, setMessages] = useState([]);
+    const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
 
     const lastMessageRef = useRef(null);
     const chatBoxRef = useRef(null);
@@ -59,7 +66,7 @@ const VitaLoginPage = () => {
                             {sidebarExpanded ? "VITA" : "V"}
                         </h2>
                         <button className="menu-button" onClick={() => setSidebarExpanded(!sidebarExpanded)}>
-                            {sidebarExpanded ? <KeyboardArrowLeft /> : <KeyboardArrowRight />}
+                            {sidebarExpanded ? <KeyboardDoubleArrowLeftRounded fontSize="large" /> : <KeyboardDoubleArrowRightRounded fontSize="large" />}
                         </button>
                     </div>
                     <nav className="sidebar-nav">
@@ -87,7 +94,11 @@ const VitaLoginPage = () => {
                             <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-1</a>
                             <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-2</a>
                             <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-3</a>
-                            <a href="#" className="last" onClick={() => { setState(STATES.ALL_CHATS); setIsRecentChats(false); }}>view all</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-4</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-5</a>
+                            <a href="#" className="last" onClick={() => {setState(STATES.ALL_CHATS);setIsRecentChats(false);}}>
+                                view all<ArrowForwardRounded fontSize="small" />
+                            </a>
                         </div>}
                         <div className="sidebar-navItem">
                             <div className="sidebar-navitem-icon-text">
@@ -99,7 +110,11 @@ const VitaLoginPage = () => {
                             <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-1</a>
                             <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-2</a>
                             <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-3</a>
-                            <a href="#" className="last" onClick={() => { setState(STATES.ALL_CHATS); setIsRecentChats(true); }}>view all</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-4</a>
+                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-5</a>
+                            <a href="#" className="last" onClick={() => {setState(STATES.ALL_CHATS);setIsRecentChats(true);}}>
+                                view all<ArrowForwardRounded fontSize="small" />
+                            </a>
                         </div>}
                     </nav>
                     <div className="sidebar-profile-section">
@@ -108,7 +123,7 @@ const VitaLoginPage = () => {
                     </div>
                 </div>
                 <div className="chatbox" ref={chatBoxRef}>
-                    {state === STATES.MAIN && <Main />}
+                    {state === STATES.MAIN && <Main setStateProject={() => setState(STATES.PROJECT)} />}
                     {state === STATES.PROJECT &&
                         <IndividualProject
                             setStateAllProjects={() => setState(STATES.ALL_PROJECTS)}
@@ -121,7 +136,7 @@ const VitaLoginPage = () => {
                     {state === STATES.RECENT &&
                         <ChatInterface messages={messages} lastMessageRef={lastMessageRef} />
                     }
-                    {state === STATES.CHAT && <Chat />}
+                    {state === STATES.CHAT && <Chat rightSidebarOpen={rightSidebarOpen} setRightSidebarOpen={setRightSidebarOpen} />}
                     {state === STATES.ALL_CHATS && <AllChats isRecentChats={isRecentChats} />}
                 </div>
             </div>

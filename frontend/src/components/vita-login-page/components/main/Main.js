@@ -3,7 +3,7 @@ import './main.css';
 import MessageBar from "../../../common/message_bar/MessageBar";
 import { DeleteOutline } from '@mui/icons-material';
 
-const Main = () => {
+const Main = ({ setStateProject }) => {
   const fileInputRef = useRef();
   const [attachedFiles, setAttachedFiles] = useState([]);
 
@@ -50,6 +50,7 @@ const Main = () => {
           onFileChange={onFileChange}
           fileInputRef={fileInputRef}
           deleteFile={deleteFile}
+          onSendMessage={() => {}}
         />
         
         <div className="main-container-recent-chats-container">
@@ -59,7 +60,7 @@ const Main = () => {
           </div>
           <div className="main-container-recent-chats-grid">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div className="main-container-recent-chats-card" key={index}>
+              <div className="main-container-recent-chats-card card" key={index} onClick={setStateProject}>
                 <h3 className="main-container-recent-card-heading">Project Structure for AI Agents and Tools</h3>
                 <p className="main-container-recent-card-time">4 hours ago</p>
               </div>

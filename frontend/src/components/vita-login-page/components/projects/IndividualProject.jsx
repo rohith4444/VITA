@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./individualproject.css"
 import MessageBar from "../../../common/message_bar/MessageBar";
-import { ArrowBack, Menu } from '@mui/icons-material';
+import { ArrowBackRounded, MenuRounded } from '@mui/icons-material';
 
 const IndividualProject = ({ setStateAllProjects, setStateChat }) => {
     const [attachedFiles, setAttachedFiles] = useState([]);
@@ -36,10 +36,10 @@ const IndividualProject = ({ setStateAllProjects, setStateChat }) => {
             <div className="individual-project-container">
                 <div className="individual-project-header">
                     <div className="individual-project-back" onClick={setStateAllProjects}>
-                        <ArrowBack /> All projects
+                        <ArrowBackRounded fontSize="large"/> All projects
                     </div>
                     <div className="individual-project-menu">
-                        <Menu />
+                        <MenuRounded fontSize="large" />
                     </div>
                 </div>
                 <div className="individual-project-body">
@@ -61,7 +61,7 @@ const IndividualProject = ({ setStateAllProjects, setStateChat }) => {
                         </div>
                         <div className="individual-project-recent-chats-grid">
                             {Array.from({ length: 10 }).map((_, index) => (
-                                <div className="individual-project-recent-chats-card" key={index} onClick={setStateChat}>
+                                <div className="individual-project-recent-chats-card card" key={index} onClick={setStateChat}>
                                     <h3 className="individual-project-recent-card-heading">Project Structure for AI Agents and Tools</h3>
                                     <p className="individual-project-recent-card-time">4 hours ago</p>
                                 </div>

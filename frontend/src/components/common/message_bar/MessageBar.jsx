@@ -3,7 +3,7 @@ import "./messagebar.css";
 import TextInput from "../textinput/TextInput";
 import { AttachFileOutlined, Send, DeleteOutline } from '@mui/icons-material';
 
-const MessageBar = ({ attachedFiles, onFileChange, fileInputRef, deleteFile, ...props }) => {
+const MessageBar = ({ attachedFiles, onFileChange, fileInputRef, deleteFile, onSendMessage, ...props }) => {
 
     const [text, setText] = useState("");
 
@@ -19,9 +19,14 @@ const MessageBar = ({ attachedFiles, onFileChange, fileInputRef, deleteFile, ...
         </div>;
     };
 
-    const sendMessage = () => {
-        setText("");
-        props.onSendMessage(text);
+    const sendMessage = (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            if (text !== "" && text !== "\n") {
+                event.preventDefault()
+                setText("");
+                onSendMessage(text);
+            }
+        }
     }
 
     return (
@@ -41,7 +46,7 @@ const MessageBar = ({ attachedFiles, onFileChange, fileInputRef, deleteFile, ...
                     maxRows={5}
                     value={text}
                     onChange={(event) => {setText(event.target.value)}}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage(e)}
                 />
                 <div className="min-container-input-meta">
                     <div className="min-container-input-meta-choose">
@@ -56,7 +61,7 @@ const MessageBar = ({ attachedFiles, onFileChange, fileInputRef, deleteFile, ...
                     <div className="min-container-input-meta-send-message">
                     <input type="file" onChange={onFileChange} multiple ref={fileInputRef} hidden />
                     <AttachFileOutlined onClick={() => fileInputRef.current.click()} />
-                    <Send onClick={sendMessage}/>
+                    <Send sx={{ transform: "rotate(-90deg)" }} onClick={sendMessage}/>
                     </div>
                 </div>
             </div>
