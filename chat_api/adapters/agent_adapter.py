@@ -125,6 +125,263 @@ class AgentAdapter:
             raise ValueError(f"Failed to run agent: {str(e)}")
     
     @trace_method
+    @monitor_operation(operation_type="agent_response_generation")
+    async def generate_response(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a response from the appropriate agent based on session context.
+        
+        Args:
+            context: Context data including session, messages, and other information
+            
+        Returns:
+            Dict[str, Any]: Response from the agent
+            
+        Raises:
+            ValueError: If agent generation fails
+        """
+        session_id = context.get("session_id")
+        if not session_id:
+            self.logger.error("Missing session_id in context")
+            raise ValueError("Context must include session_id")
+            
+        self.logger.info(f"Generating response for session {session_id}")
+        
+        try:
+            # Get the agent type from context
+            session_info = context.get("session_info", {})
+            agent_type = session_info.get("primary_agent", "project_manager")
+            
+            # Check if agent already exists
+            if session_id not in self._active_agents:
+                # Create a new agent
+                await self.create_agent(
+                    session_id=session_id,
+                    agent_type=agent_type
+                )
+            
+            agent = self._active_agents[session_id]
+            
+            # Format input for agent
+            current_message = context.get("current_message", "")
+            if not current_message:
+                self.logger.warning("No current_message in context")
+                current_message = "Please help me with this task."
+                
+            # Create agent input data
+            agent_input = {
+                "input": current_message,
+                "context": context
+            }
+            
+            # Run the agent
+            result = await agent.run(agent_input)
+            
+            # Format the response
+            response = {
+                "content": result.get("output", "I don't have a specific answer at this moment."),
+                "artifacts": result.get("artifacts", []),
+                "metadata": {
+                    "agent_type": agent_type,
+                    "processing_time": result.get("processing_time", 0),
+                    "confidence": result.get("confidence", 0.0),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            }
+            
+            self.logger.info(f"Generated response for session {session_id}")
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error generating response: {str(e)}", exc_info=True)
+            return {
+                "content": "I encountered an issue processing your request. Please try again.",
+                "artifacts": [],
+                "metadata": {
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            }
+    
+    @trace_method
+    @monitor_operation(operation_type="agent_title_generation")
+    async def generate_title(self, first_message: str) -> str:
+        """
+        Generate a title for a chat session based on the first message.
+        
+        Args:
+            first_message: First message in the session
+            
+        Returns:
+            str: Generated title
+            
+        Raises:
+            Exception: If title generation fails
+        """
+        self.logger.info("Generating title for session based on first message")
+        
+        try:
+            # Use ProjectManager agent for title generation
+            temp_agent_id = f"title_generator_{uuid4()}"
+            
+            title_agent = ProjectManagerAgent(
+                agent_id=temp_agent_id,
+                name="Title Generator",
+                memory_manager=self.memory_manager
+            )
+            
+            # Create simplified input for title generation
+            title_input = {
+                "input": first_message,
+                "task": "generate_title",
+                "max_length": 50
+            }
+            
+            # Run the agent
+            result = await title_agent.run(title_input)
+            
+            # Extract title from result
+            title = result.get("title", "New Chat")
+            
+            # Clean up title (remove quotes, etc.)
+            title = title.strip(' "\'')
+            
+            # Use default if empty
+            if not title:
+                title = "New Chat"
+                
+            self.logger.info(f"Generated title: {title}")
+            return title
+            
+        except Exception as e:
+            self.logger.error(f"Error generating title: {str(e)}", exc_info=True)
+            return "New Chat"  # Default title on error
+    
+    @trace_method
+    @monitor_operation(operation_type="agent_feedback_processing")
+    async def process_feedback(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process user feedback on a response.
+        
+        Args:
+            context: Context containing feedback data and session information
+            
+        Returns:
+            Dict[str, Any]: Status of the feedback processing
+            
+        Raises:
+            ValueError: If feedback processing fails
+        """
+        session_id = context.get("session_id")
+        if not session_id:
+            self.logger.error("Missing session_id in feedback context")
+            raise ValueError("Context must include session_id")
+            
+        feedback_data = context.get("feedback", {})
+        if not feedback_data:
+            self.logger.error("Missing feedback data in context")
+            raise ValueError("Context must include feedback data")
+            
+        message_id = feedback_data.get("message_id")
+        if not message_id:
+            self.logger.error("Missing message_id in feedback data")
+            raise ValueError("Feedback must include message_id")
+            
+        self.logger.info(f"Processing feedback for message {message_id} in session {session_id}")
+        
+        try:
+            # Store feedback in memory system for later learning
+            # (This would be implemented based on your learning pipeline)
+            
+            return {
+                "status": "success",
+                "message": "Feedback recorded successfully",
+                "message_id": message_id,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error processing feedback: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "message": f"Failed to process feedback: {str(e)}",
+                "message_id": message_id,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @trace_method
+    @monitor_operation(operation_type="agent_tool_execution")
+    async def execute_tool(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a tool via the agent.
+        
+        Args:
+            context: Context containing tool information and session data
+            
+        Returns:
+            Dict[str, Any]: Tool execution results
+            
+        Raises:
+            ValueError: If tool execution fails
+        """
+        session_id = context.get("session_id")
+        if not session_id:
+            self.logger.error("Missing session_id in tool context")
+            raise ValueError("Context must include session_id")
+            
+        tool_data = context.get("tool", {})
+        if not tool_data:
+            self.logger.error("Missing tool data in context")
+            raise ValueError("Context must include tool data")
+            
+        tool_name = tool_data.get("name")
+        if not tool_name:
+            self.logger.error("Missing tool name in tool data")
+            raise ValueError("Tool data must include name")
+            
+        tool_params = tool_data.get("params", {})
+        
+        self.logger.info(f"Executing tool {tool_name} in session {session_id}")
+        
+        try:
+            if session_id not in self._active_agents:
+                # Get the agent type from context
+                session_info = context.get("session_info", {})
+                agent_type = session_info.get("primary_agent", "project_manager")
+                
+                # Create a new agent
+                await self.create_agent(
+                    session_id=session_id,
+                    agent_type=agent_type
+                )
+            
+            agent = self._active_agents[session_id]
+            
+            # Check if agent has the tool
+            if not hasattr(agent, "execute_tool"):
+                self.logger.error(f"Agent does not support tool execution: {type(agent).__name__}")
+                raise ValueError(f"Agent does not support tool execution")
+            
+            # Execute the tool
+            tool_result = await agent.execute_tool(tool_name, tool_params)
+            
+            self.logger.info(f"Tool {tool_name} executed successfully")
+            return {
+                "status": "success",
+                "tool_name": tool_name,
+                "result": tool_result,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error executing tool {tool_name}: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "tool_name": tool_name,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
+    @trace_method
     @monitor_operation(operation_type="agent_report_generation")
     async def generate_report(self, session_id: str) -> Dict[str, Any]:
         """

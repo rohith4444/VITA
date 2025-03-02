@@ -14,8 +14,9 @@ logger = setup_logger("chat_api.adapters.memory")
 @trace_class
 class MemoryAdapter:
     """
-    Adapter for the existing memory system.
-    Provides an interface to the three-tier memory architecture for the chat API.
+    Adapter for the existing memory system with focus on Long-term Memory.
+    Provides an interface to connect the chat API with the underlying memory architecture,
+    prioritizing Long-term Memory for persistent storage of agent context.
     """
     
     def __init__(self, memory_manager: MemoryManager):
@@ -26,7 +27,7 @@ class MemoryAdapter:
             memory_manager: The memory manager from the existing system
         """
         self.logger = setup_logger("chat_api.adapters.memory.instance")
-        self.logger.info("Initializing Memory Adapter")
+        self.logger.info("Initializing Memory Adapter with Long-term focus")
         self.memory_manager = memory_manager
         
     @trace_method
@@ -34,7 +35,7 @@ class MemoryAdapter:
     async def store_short_term(self, agent_id: str, content: Dict[str, Any], 
                               metadata: Optional[Dict[str, Any]] = None) -> bool:
         """
-        Store content in short-term memory.
+        Store content in short-term memory (for ephemeral context).
         
         Args:
             agent_id: Unique identifier for the agent/session
@@ -63,7 +64,7 @@ class MemoryAdapter:
     async def store_working(self, agent_id: str, content: Dict[str, Any], 
                            metadata: Optional[Dict[str, Any]] = None) -> bool:
         """
-        Store content in working memory.
+        Store content in working memory (for current session state).
         
         Args:
             agent_id: Unique identifier for the agent/session
@@ -91,26 +92,33 @@ class MemoryAdapter:
     @monitor_operation(operation_type="memory_store", metadata={"memory_type": "long_term"})
     async def store_long_term(self, agent_id: str, content: Dict[str, Any], 
                              metadata: Optional[Dict[str, Any]] = None,
-                             importance: float = 0.5) -> bool:
+                             importance: float = 0.7) -> bool:
         """
-        Store content in long-term memory.
+        Store content in long-term memory (primary storage for agent context).
         
         Args:
             agent_id: Unique identifier for the agent/session
             content: Data to store
             metadata: Optional metadata about the memory
-            importance: Importance score (0.0 to 1.0)
+            importance: Importance score (0.0 to 1.0), defaults higher for chat context
             
         Returns:
             bool: Success status
         """
         self.logger.debug(f"Storing in long-term memory for agent {agent_id}")
         try:
+            # Enhance metadata with source information
+            enhanced_metadata = {
+                "source": "chat_api",
+                "storage_timestamp": datetime.utcnow().isoformat(),
+                **(metadata or {})
+            }
+            
             result = await self.memory_manager.store(
                 agent_id=agent_id,
                 memory_type=MemoryType.LONG_TERM,
                 content=content,
-                metadata=metadata,
+                metadata=enhanced_metadata,
                 importance=importance
             )
             self.logger.debug(f"Long-term memory storage result: {result}")
@@ -178,7 +186,7 @@ class MemoryAdapter:
     async def retrieve_long_term(self, agent_id: str, query: Optional[Dict[str, Any]] = None, 
                                sort_by: str = "timestamp", limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Retrieve content from long-term memory.
+        Retrieve content from long-term memory (primary agent context source).
         
         Args:
             agent_id: Unique identifier for the agent/session
@@ -191,6 +199,12 @@ class MemoryAdapter:
         """
         self.logger.debug(f"Retrieving from long-term memory for agent {agent_id}")
         try:
+            if not query:
+                query = {}
+                
+            # Add source filter to prioritize chat API memories
+            query["metadata.source"] = "chat_api"
+            
             entries = await self.memory_manager.retrieve(
                 agent_id=agent_id,
                 memory_type=MemoryType.LONG_TERM,
@@ -206,90 +220,133 @@ class MemoryAdapter:
             return []
     
     @trace_method
-    @monitor_operation(operation_type="memory_retrieve", metadata={"memory_type": "all"})
-    async def retrieve_all_memory_types(self, agent_id: str, query: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
+    @monitor_operation(operation_type="memory_query", metadata={"memory_type": "long_term"})
+    async def search_long_term(self, agent_id: str, keywords: List[str], 
+                              content_type: Optional[str] = None, 
+                              limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Retrieve content from all memory types.
+        Search long-term memory for specific content using keywords.
         
         Args:
             agent_id: Unique identifier for the agent/session
-            query: Optional query parameters to filter results
+            keywords: List of keywords to search for
+            content_type: Optional type of content to filter by
+            limit: Maximum number of results to return
             
         Returns:
-            Dict[str, List[Dict[str, Any]]]: Dictionary with memory types as keys and lists of entries as values
+            List[Dict[str, Any]]: List of matching memory entries
         """
-        self.logger.debug(f"Retrieving from all memory types for agent {agent_id}")
-        result = {
-            "short_term": [],
-            "working": [],
-            "long_term": []
-        }
-        
+        self.logger.debug(f"Searching long-term memory for agent {agent_id} with keywords: {keywords}")
         try:
-            # Retrieve from all memory types in parallel
-            short_term = await self.retrieve_short_term(agent_id, query)
-            working = await self.retrieve_working(agent_id, query)
-            long_term = await self.retrieve_long_term(agent_id, query)
+            # Construct text search query
+            query = {
+                "$text": {"$search": " ".join(keywords)},
+                "metadata.source": "chat_api"
+            }
             
-            result["short_term"] = short_term
-            result["working"] = working
-            result["long_term"] = long_term
+            # Add content type filter if specified
+            if content_type:
+                query["metadata.content_type"] = content_type
+                
+            entries = await self.memory_manager.retrieve(
+                agent_id=agent_id,
+                memory_type=MemoryType.LONG_TERM,
+                query=query,
+                sort_by="metadata.importance",
+                limit=limit
+            )
             
-            total_count = len(short_term) + len(working) + len(long_term)
-            self.logger.debug(f"Retrieved {total_count} total entries from all memory types")
-            return result
+            results = [self._format_memory_entry(entry) for entry in entries]
+            self.logger.debug(f"Found {len(results)} entries matching keywords in long-term memory")
+            return results
         except Exception as e:
-            self.logger.error(f"Error retrieving from all memory types: {str(e)}", exc_info=True)
-            return result
+            self.logger.error(f"Error searching long-term memory: {str(e)}", exc_info=True)
+            return []
     
     @trace_method
-    @monitor_operation(operation_type="memory_update", metadata={"memory_type": "working"})
-    async def update_working_memory(self, agent_id: str, query: Dict[str, Any], 
-                                  update_data: Dict[str, Any]) -> bool:
+    @monitor_operation(operation_type="memory_update", metadata={"memory_type": "long_term"})
+    async def update_long_term(self, agent_id: str, memory_id: str, 
+                             update_data: Dict[str, Any],
+                             importance: Optional[float] = None) -> bool:
         """
-        Update content in working memory.
+        Update a specific memory entry in long-term storage.
         
         Args:
             agent_id: Unique identifier for the agent/session
-            query: Query to identify the memory to update
+            memory_id: ID of the memory to update
             update_data: New data to update
+            importance: Optional new importance score
             
         Returns:
             bool: Success status
         """
-        self.logger.debug(f"Updating working memory for agent {agent_id}")
+        self.logger.debug(f"Updating long-term memory {memory_id} for agent {agent_id}")
         try:
-            return await self.memory_manager.update(
+            query = {"id": memory_id}
+            
+            # Prepare update data
+            memory_update = {
+                "content": update_data,
+                "metadata.updated_at": datetime.utcnow().isoformat()
+            }
+            
+            # Update importance if specified
+            if importance is not None:
+                memory_update["metadata.importance"] = importance
+                
+            success = await self.memory_manager.update(
                 agent_id=agent_id,
-                memory_type=MemoryType.WORKING,
+                memory_type=MemoryType.LONG_TERM,
                 query=query,
-                update_data=update_data
+                update_data=memory_update
             )
+            
+            self.logger.debug(f"Long-term memory update result: {success}")
+            return success
         except Exception as e:
-            self.logger.error(f"Error updating working memory: {str(e)}", exc_info=True)
+            self.logger.error(f"Error updating long-term memory: {str(e)}", exc_info=True)
             return False
     
     @trace_method
-    @monitor_operation(operation_type="memory_consolidate")
-    async def consolidate_to_long_term(self, agent_id: str, importance_threshold: float = 0.5) -> bool:
+    @monitor_operation(operation_type="memory_initialize")
+    async def initialize_session_memory(self, session_id: str, agent_id: str) -> bool:
         """
-        Consolidate important short-term memories to long-term storage.
+        Initialize memory structure for a new chat session.
         
         Args:
-            agent_id: Unique identifier for the agent/session
-            importance_threshold: Minimum importance score for consolidation
+            session_id: ID of the session
+            agent_id: ID of the primary agent
             
         Returns:
             bool: Success status
         """
-        self.logger.debug(f"Consolidating memories for agent {agent_id}")
+        self.logger.info(f"Initializing memory for session {session_id} with agent {agent_id}")
         try:
-            return await self.memory_manager.consolidate_to_long_term(
-                agent_id=agent_id,
-                importance_threshold=importance_threshold
+            # Create session metadata in long-term memory
+            session_info = {
+                "session_id": str(session_id),
+                "agent_id": agent_id,
+                "session_type": "chat",
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            metadata = {
+                "content_type": "session_info",
+                "importance": 0.9  # High importance for session metadata
+            }
+            
+            # Store in long-term memory
+            success = await self.store_long_term(
+                agent_id=str(session_id),
+                content=session_info,
+                metadata=metadata,
+                importance=0.9
             )
+            
+            self.logger.info(f"Session memory initialization result: {success}")
+            return success
         except Exception as e:
-            self.logger.error(f"Error consolidating memories: {str(e)}", exc_info=True)
+            self.logger.error(f"Error initializing session memory: {str(e)}", exc_info=True)
             return False
     
     @trace_method
@@ -321,11 +378,11 @@ class MemoryAdapter:
         """
         try:
             return {
-                "memory_id": getattr(entry, "id", None),
+                "memory_id": getattr(entry, "id", str(hash(entry))),
                 "memory_type": entry.memory_type.value,
                 "agent_id": entry.agent_id,
                 "content": entry.content,
-                "metadata": entry.metadata,
+                "metadata": entry.metadata or {},
                 "timestamp": entry.timestamp.isoformat() if hasattr(entry.timestamp, "isoformat") else str(entry.timestamp)
             }
         except Exception as e:

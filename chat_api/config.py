@@ -47,10 +47,6 @@ class ChatAPISettings(BaseSettings):
     # Database configuration
     DATABASE_URL = "sqlite:///./vita.db"
 
-    # API configuration
-    API_VERSION = "v1"
-    API_PREFIX = f"/api/{API_VERSION}"
-
     # Chat configuration
     MAX_MESSAGES_PER_PAGE = 50
     MAX_MESSAGE_LENGTH = 2000  # Maximum length of a message in characters
@@ -59,7 +55,7 @@ class ChatAPISettings(BaseSettings):
     LOG_LEVEL = "INFO"
     
     class Config:
-        env_file = ".env"
+        env_file = "../backend/.env" 
         env_file_encoding = "utf-8"
         case_sensitive = True
 

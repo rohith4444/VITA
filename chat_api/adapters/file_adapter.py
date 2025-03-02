@@ -1,5 +1,3 @@
-# app/utils/file_adapter.py
-
 import os
 import uuid
 from typing import BinaryIO, Optional

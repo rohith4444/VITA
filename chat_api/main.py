@@ -3,38 +3,49 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
-from chat_api.routes import session_routes, message_routes, file_routes, agent_routes
-from chat_api.config import API_PREFIX
-from chat_api.database import Base, engine
+from chat_api.routes import session_routes, message_routes, file_routes, agent_routes, auth_routes
+from chat_api.config import settings
+from chat_api.database import Base, engine, memory_manager, get_memory_manager
 from core.logging.logger import setup_logger
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-# Setup logger
+# Initialize logger
 logger = setup_logger(__name__)
+logger.info("Starting Chat API application")
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
+logger.info("Database tables created")
+
+# Initialize memory manager
+memory_manager = get_memory_manager()
+logger.info("Memory manager initialized")
 
 # Create FastAPI app
 app = FastAPI(
-    title="Chat API",
-    description="API for chat functionality with agent integration",
-    version="1.0.0"
+    title=settings.API_TITLE,
+    description=settings.API_DESCRIPTION,
+    version=settings.API_VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+logger.info(f"CORS configured with origins: {settings.CORS_ORIGINS}")
 
 # Include routers
-app.include_router(session_routes.router, prefix=API_PREFIX)
-app.include_router(message_routes.router, prefix=API_PREFIX)
-app.include_router(file_routes.router, prefix=API_PREFIX)
-app.include_router(agent_routes.router, prefix=API_PREFIX)
+app.include_router(auth_routes.router, prefix=settings.API_PREFIX)
+app.include_router(session_routes.router, prefix=settings.API_PREFIX)
+app.include_router(message_routes.router, prefix=settings.API_PREFIX)
+app.include_router(file_routes.router, prefix=settings.API_PREFIX)
+app.include_router(agent_routes.router, prefix=settings.API_PREFIX)
+logger.info("API routes registered")
 
 # Exception handlers
 @app.exception_handler(RequestValidationError)
@@ -45,7 +56,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.warning(f"Validation error: {exc}")
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()}
+        content={"detail": exc.errors(), "body": exc.body}
     )
 
 @app.exception_handler(HTTPException)
@@ -64,7 +75,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     """
     Handle general exceptions.
     """
-    logger.error(f"Unhandled exception: {str(exc)}")
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
@@ -77,9 +88,9 @@ async def root():
     Root endpoint.
     """
     return {
-        "message": "Welcome to the Chat API",
+        "message": f"Welcome to the {settings.API_TITLE}",
         "docs": "/docs",
-        "version": "1.0.0"
+        "version": settings.API_VERSION
     }
 
 # Health check endpoint
@@ -92,4 +103,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=settings.HOST, port=settings.PORT)

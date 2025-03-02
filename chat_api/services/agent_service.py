@@ -50,11 +50,11 @@ class AgentService:
             additional_context: Optional additional context
             
         Returns:
-            Dictionary containing the agent response and any artifacts
+            Dict[str, Any]: Result from the agent execution
         """
         try:
             # Build context from memory
-            context = self.memory_service.build_context(
+            context = await self.memory_service.build_context(
                 session_id=session_id,
                 system_prompt=system_prompt,
                 user_info=user_info,
@@ -87,7 +87,7 @@ class AgentService:
             first_message: First message in the session
             
         Returns:
-            Generated title
+            str: Generated title
         """
         try:
             logger.info(f"Generating title for session {session_id}")
@@ -113,11 +113,11 @@ class AgentService:
             feedback: Feedback data
             
         Returns:
-            Status of the feedback processing
+            Dict[str, Any]: Status of the feedback processing
         """
         try:
             # Get the message context
-            context = self.memory_service.build_context(session_id=session_id)
+            context = await self.memory_service.build_context(session_id=session_id)
             
             # Add feedback context
             context["feedback"] = {
@@ -149,11 +149,11 @@ class AgentService:
             tool_params: Parameters for the tool
             
         Returns:
-            Tool execution results
+            Dict[str, Any]: Tool execution results
         """
         try:
             # Get the session context
-            context = self.memory_service.build_context(session_id=session_id)
+            context = await self.memory_service.build_context(session_id=session_id)
             
             # Add tool execution context
             context["tool"] = {
@@ -169,3 +169,68 @@ class AgentService:
         except Exception as e:
             logger.error(f"Error executing tool {tool_name} in session {session_id}: {str(e)}")
             raise Exception(f"Failed to execute tool: {str(e)}")
+            
+    async def get_agent_types(self) -> Dict[str, str]:
+        """
+        Get a list of available agent types with descriptions.
+        
+        Returns:
+            Dict[str, str]: Map of agent type names to descriptions
+        """
+        try:
+            return await self.agent_adapter.get_agent_types()
+        except Exception as e:
+            logger.error(f"Error retrieving agent types: {str(e)}")
+            # Return basic types on error
+            return {
+                "project_manager": "Project planning and management",
+                "solution_architect": "System architecture design",
+                "full_stack_developer": "Implementation of components",
+                "qa_test": "Testing and quality assurance"
+            }
+            
+    async def generate_report(self, session_id: UUID) -> Dict[str, Any]:
+        """
+        Generate a comprehensive report for a session.
+        
+        Args:
+            session_id: ID of the session
+            
+        Returns:
+            Dict[str, Any]: Generated report
+        """
+        try:
+            logger.info(f"Generating report for session {session_id}")
+            report = await self.agent_adapter.generate_report(str(session_id))
+            
+            # Format report if needed
+            formatted_report = self.response_formatter.format_report(report)
+            
+            return formatted_report
+        except Exception as e:
+            logger.error(f"Error generating report for session {session_id}: {str(e)}")
+            # Return basic report on error
+            return {
+                "status": "error",
+                "message": f"Failed to generate report: {str(e)}",
+                "session_id": str(session_id),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+    async def cleanup_session_agents(self, session_id: UUID) -> bool:
+        """
+        Clean up agent resources for a session.
+        
+        Args:
+            session_id: ID of the session
+            
+        Returns:
+            bool: Success status
+        """
+        try:
+            logger.info(f"Cleaning up agents for session {session_id}")
+            success = await self.agent_adapter.cleanup_agent(str(session_id))
+            return success
+        except Exception as e:
+            logger.error(f"Error cleaning up agents for session {session_id}: {str(e)}")
+            return False

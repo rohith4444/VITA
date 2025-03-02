@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, Background
 from sqlalchemy.orm import Session
 
 from chat_api.database import get_db
-from chat_api.schemas.message import MessageCreate, MessageResponse, MessageList
-from chat_api.schemas.response import ResponseCreate, ResponseResponse
+from chat_api.schemas.message_schemas import MessageCreate, MessageResponse, MessageList
+from chat_api.schemas.response_schemas import ResponseCreate, ResponseResponse
 from chat_api.services.message_service import MessageService
 from chat_api.services.memory_service import MemoryService
 from chat_api.services.agent_service import AgentService
@@ -15,9 +15,9 @@ from chat_api.adapters.memory_adapter import MemoryAdapter
 from chat_api.adapters.agent_adapter import AgentAdapter
 from chat_api.adapters.file_adapter import FileAdapter
 from chat_api.utils.context_builder import ContextBuilder
-from chat_api.utils.response_formatter import ResponseFormatter
-from chat_api.core.auth import get_current_user_id
-from chat_api.core.logging import setup_logger
+from chat_api.utils.response_formatter import ResponseFormatter, format_message_response, format_message_list_response, raise_http_exception
+from chat_api.auth import get_current_user_id
+from core.logging.logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -29,7 +29,7 @@ def get_message_service(db: Session = Depends(get_db)) -> MessageService:
     memory_adapter = MemoryAdapter()
     memory_service = MemoryService(
         memory_adapter=memory_adapter,
-        context_builder=ContextBuilder()
+        context_builder=ContextBuilder(memory_adapter)
     )
     file_adapter = FileAdapter()
     return MessageService(
@@ -48,10 +48,10 @@ def get_agent_service() -> AgentService:
     memory_adapter = MemoryAdapter()
     memory_service = MemoryService(
         memory_adapter=memory_adapter,
-        context_builder=ContextBuilder()
+        context_builder=ContextBuilder(memory_adapter)
     )
     return AgentService(
-        agent_adapter=AgentAdapter(),
+        agent_adapter=AgentAdapter(memory_adapter.memory_manager),
         memory_service=memory_service,
         response_formatter=ResponseFormatter()
     )
@@ -72,15 +72,17 @@ async def get_messages(
         # Check session ownership
         session = session_service.get_session(session_id=session_id)
         if not session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Session {session_id} not found"
+            raise_http_exception(
+                error_code="session_not_found",
+                message=f"Session {session_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         if session.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this session"
+            raise_http_exception(
+                error_code="permission_denied",
+                message="Not authorized to access this session",
+                status_code=status.HTTP_403_FORBIDDEN
             )
         
         # Get messages
@@ -94,20 +96,16 @@ async def get_messages(
         all_messages = message_service.get_session_messages(session_id=session_id)
         total = len(all_messages)
         
-        return MessageList(
-            items=messages,
-            total=total,
-            skip=skip,
-            limit=limit
-        )
+        return format_message_list_response(messages, total)
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
         logger.error(f"Error retrieving messages for session {session_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve messages: {str(e)}"
+        raise_http_exception(
+            error_code="message_retrieval_failed",
+            message=f"Failed to retrieve messages: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
@@ -127,15 +125,25 @@ async def create_message(
         # Check session ownership
         session = session_service.get_session(session_id=session_id)
         if not session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Session {session_id} not found"
+            raise_http_exception(
+                error_code="session_not_found",
+                message=f"Session {session_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         if session.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this session"
+            raise_http_exception(
+                error_code="permission_denied",
+                message="Not authorized to access this session",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check message limit
+        if not session_service.validate_session_limits(session_id=session_id):
+            raise_http_exception(
+                error_code="session_limit_exceeded",
+                message="Session has reached the maximum message limit",
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         
         # Create user message
@@ -165,20 +173,22 @@ async def create_message(
                 agent_service=agent_service
             )
         
-        return user_message
+        return format_message_response(user_message)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
+        raise_http_exception(
+            error_code="validation_error",
+            message=str(e),
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
         logger.error(f"Error creating message in session {session_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create message: {str(e)}"
+        raise_http_exception(
+            error_code="message_creation_failed",
+            message=f"Failed to create message: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @router.get("/{message_id}", response_model=MessageResponse)
@@ -196,41 +206,46 @@ async def get_message(
         # Check session ownership
         session = session_service.get_session(session_id=session_id)
         if not session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Session {session_id} not found"
+            raise_http_exception(
+                error_code="session_not_found",
+                message=f"Session {session_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         if session.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this session"
+            raise_http_exception(
+                error_code="permission_denied",
+                message="Not authorized to access this session",
+                status_code=status.HTTP_403_FORBIDDEN
             )
         
         # Get message
         message = message_service.get_message(message_id=message_id)
         if not message:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Message {message_id} not found"
+            raise_http_exception(
+                error_code="message_not_found",
+                message=f"Message {message_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         # Check that message belongs to the session
         if message.session_id != session_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Message {message_id} not found in session {session_id}"
+            raise_http_exception(
+                error_code="message_not_in_session",
+                message=f"Message {message_id} not found in session {session_id}",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
-        return message
+        return format_message_response(message)
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
         logger.error(f"Error retrieving message {message_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve message: {str(e)}"
+        raise_http_exception(
+            error_code="message_retrieval_failed",
+            message=f"Failed to retrieve message: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -248,46 +263,52 @@ async def delete_message(
         # Check session ownership
         session = session_service.get_session(session_id=session_id)
         if not session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Session {session_id} not found"
+            raise_http_exception(
+                error_code="session_not_found",
+                message=f"Session {session_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         if session.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this session"
+            raise_http_exception(
+                error_code="permission_denied",
+                message="Not authorized to access this session",
+                status_code=status.HTTP_403_FORBIDDEN
             )
         
         # Get message to check ownership
         message = message_service.get_message(message_id=message_id)
         if not message:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Message {message_id} not found"
+            raise_http_exception(
+                error_code="message_not_found",
+                message=f"Message {message_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         # Check that message belongs to the session
         if message.session_id != session_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Message {message_id} not found in session {session_id}"
+            raise_http_exception(
+                error_code="message_not_in_session",
+                message=f"Message {message_id} not found in session {session_id}",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         
         # Check ownership for user messages
         if message.role == "user" and message.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to delete this message"
+            raise_http_exception(
+                error_code="permission_denied",
+                message="Not authorized to delete this message",
+                status_code=status.HTTP_403_FORBIDDEN
             )
         
         # Delete the message
         success = message_service.delete_message(message_id=message_id)
         
         if not success:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete message {message_id}"
+            raise_http_exception(
+                error_code="message_deletion_failed",
+                message=f"Failed to delete message {message_id}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
         return None
@@ -296,9 +317,112 @@ async def delete_message(
         raise
     except Exception as e:
         logger.error(f"Error deleting message {message_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete message: {str(e)}"
+        raise_http_exception(
+            error_code="message_deletion_failed",
+            message=f"Failed to delete message: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@router.post("/{message_id}/feedback", response_model=Dict[str, Any])
+async def add_message_feedback(
+    session_id: UUID,
+    message_id: UUID,
+    feedback_data: Dict[str, Any],
+    message_service: MessageService = Depends(get_message_service),
+    session_service: SessionService = Depends(get_session_service),
+    agent_service: AgentService = Depends(get_agent_service),
+    user_id: UUID = Depends(get_current_user_id)
+):
+    """
+    Add feedback to a message.
+    """
+    try:
+        # Check session ownership
+        session = session_service.get_session(session_id=session_id)
+        if not session:
+            raise_http_exception(
+                error_code="session_not_found",
+                message=f"Session {session_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        
+        if session.user_id != user_id:
+            raise_http_exception(
+                error_code="permission_denied",
+                message="Not authorized to access this session",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Verify message exists and belongs to session
+        message = message_service.get_message(message_id=message_id)
+        if not message:
+            raise_http_exception(
+                error_code="message_not_found",
+                message=f"Message {message_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        
+        if message.session_id != session_id:
+            raise_http_exception(
+                error_code="message_not_in_session",
+                message=f"Message {message_id} not found in session {session_id}",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Only allow feedback on assistant messages
+        if message.role != "assistant":
+            raise_http_exception(
+                error_code="invalid_feedback_target",
+                message="Feedback can only be provided on assistant messages",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate feedback data
+        if not isinstance(feedback_data, dict) or "type" not in feedback_data:
+            raise_http_exception(
+                error_code="invalid_feedback",
+                message="Feedback must contain a 'type' field",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Add feedback to message
+        added = message_service.add_message_feedback(
+            message_id=message_id,
+            feedback_type=feedback_data["type"],
+            feedback_content=feedback_data,
+            user_id=user_id
+        )
+        
+        if not added:
+            raise_http_exception(
+                error_code="feedback_addition_failed",
+                message=f"Failed to add feedback to message {message_id}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Process feedback with agent
+        agent_result = await agent_service.process_feedback(
+            session_id=session_id,
+            message_id=message_id,
+            feedback=feedback_data
+        )
+        
+        return {
+            "status": "success",
+            "message": "Feedback recorded successfully",
+            "message_id": str(message_id),
+            "feedback_type": feedback_data["type"],
+            "agent_result": agent_result
+        }
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error adding feedback to message {message_id}: {str(e)}")
+        raise_http_exception(
+            error_code="feedback_addition_failed",
+            message=f"Failed to add feedback: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 # Background task for generating assistant response
