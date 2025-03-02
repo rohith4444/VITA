@@ -10,6 +10,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import { useTheme } from '@mui/material/styles';
 
 const projects = [
     { title: "AETHER AI", description: "description", updated: "1 day ago" },
@@ -21,7 +22,7 @@ const projects = [
 ];
 
 const Project = ({ setStateProject, ...props }) => {
-
+    const theme = useTheme()
     const [open, setOpen] = React.useState(false);
 
     const handleClickOpen = () => {
@@ -39,13 +40,14 @@ const Project = ({ setStateProject, ...props }) => {
                     <h2>All your Projects</h2>
                 </div>
                 <div className="right-search-project">
-                    <CustomButton version="v2" onClick={handleClickOpen}>New Project</CustomButton>
+                    <CustomButton version="v2" bgColor={theme.palette.secondary.main} onClick={handleClickOpen}>New Project</CustomButton>
                 </div>
             </div>
             <div className="top-search">
                 <div className="left-new-project">
                     <TextInput size="small"
                         label="Enter text to search"
+                        fullWidth
                         InputProps={{
                             endAdornment: (
                                 <InputAdornment>
@@ -58,7 +60,7 @@ const Project = ({ setStateProject, ...props }) => {
                     />
                 </div>
                 <div className="right-search-project">
-                    <CustomButton><Tune />&nbsp;&nbsp;Filters</CustomButton>
+                    <CustomButton><Tune fontSize="small" />&nbsp;&nbsp;Filters</CustomButton>
                 </div>
             </div>
             <div className="recent-projects">
@@ -70,7 +72,7 @@ const Project = ({ setStateProject, ...props }) => {
                     </div>
                 ))} */}
                 {projects.map((project, index) => (
-                    <div className="project-card" key={index} onClick={setStateProject}>
+                    <div className="project-card card" key={index} onClick={setStateProject}>
                         <h3 className="project-title">{project.title}</h3>
                         <p className="project-description">{project.description}</p>
                         <p className="project-updated">Updated {project.updated}</p>

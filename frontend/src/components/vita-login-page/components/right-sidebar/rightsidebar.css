@@ -1,0 +1,28 @@
+.rightsidebar {
+    /* position: fixed; */
+    right: 0;
+    height: calc(100vh - 90px);
+    width: 30%;
+    background-color: white;
+    border: 0.5px solid gray;
+    padding: 1rem;
+    border-radius: 1rem;
+}
+
+.not-visible {
+    display: none;
+}
+
+.rightsidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rightsidebar-header h2 {
+    margin: 0px
+}
+
+.fontsize-large {
+    font-size: larger;
+}

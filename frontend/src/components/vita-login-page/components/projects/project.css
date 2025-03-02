@@ -41,7 +41,7 @@
     border: 1px solid #ddd;
     display: flex;
     flex-direction: column;
-    width: 45%;
+    /* width: 44%; */
 }
 
 .project-title {

@@ -6,7 +6,16 @@ const theme = createTheme({
       main: '#000000',
     },
     secondary: {
-      main: "#f6af3b",
+      main: '#7B592B',
+      light: '#A37C44',
+      dark: '#543A14',
+      contrastText: '#FFFFFF'
+    },
+    success: {
+      main: '#3A574A',
+      light: '#5D7D6E',
+      dark: '#293D33',
+      contrastText: '#FFFFFF'
     }
   },
   typography: {

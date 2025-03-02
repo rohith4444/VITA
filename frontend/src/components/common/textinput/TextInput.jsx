@@ -4,16 +4,16 @@ import { withStyles } from "@mui/styles";
 import React from "react";
 
 //declare the const and add the material UI style
-const CssTextField = withStyles({
+const CssTextField = withStyles(theme => ({
     root: {
       '& label': {
-        color: 'black',
+        color: theme.palette.secondary.dark,
       },
       '& label.Mui-focused': {
-        color: 'black',
+        color: theme.palette.secondary.dark,
       },
       '& .MuiInput-underline:after': {
-        borderBottomColor: 'black',
+        borderBottomColor: theme.palette.secondary.dark,
       },
       '& .MuiOutlinedInput-root': {
         '& fieldset': {
@@ -27,7 +27,7 @@ const CssTextField = withStyles({
         },
       },
     },
-  })(TextField);
+  }))(TextField);
 
 const TextInput = ({ ...props }) => {
     return (
