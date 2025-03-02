@@ -23,3 +23,34 @@ python-dotenv
 pydantic
 tqdm
 tavily-python
+
+# FastAPI and web server
+fastapi
+uvicorn
+websockets
+python-multipart
+
+# Database
+sqlalchemy
+alembic
+pymongo
+
+# Authentication
+python-jose
+passlib
+bcrypt
+
+# File handling
+aiofiles
+
+# Tracing and monitoring
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+
+# Logging
+loguru
+
+# Utilities
+uuid
+pydantic-settings

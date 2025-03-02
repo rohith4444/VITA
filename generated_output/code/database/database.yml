@@ -1,0 +1,15 @@
+development:
+  adapter: postgresql
+  encoding: unicode
+  database: todo_app_development
+  pool: 5
+  username: todo_app
+  password: secret
+
+production:
+  adapter: postgresql
+  encoding: unicode
+  database: todo_app_production
+  pool: 5
+  username: todo_app
+  password: secret

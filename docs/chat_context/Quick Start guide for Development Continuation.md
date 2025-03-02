@@ -16,7 +16,13 @@ agents/
 ├── project_manager/        # Project Manager implementation
 │   ├── agent.py
 │   └── state_graph.py
-└── solution_architect/     # Solution Architect implementation
+├── solution_architect/     # Solution Architect implementation
+│   ├── agent.py
+│   ├── state_graph.py
+│   └── llm/                # Agent-specific LLM components
+│       ├── prompts.py
+│       └── service.py
+└── qa_test/               # QA Test Agent implementation
     ├── agent.py
     ├── state_graph.py
     └── llm/                # Agent-specific LLM components
@@ -51,6 +57,17 @@ class SolutionArchitectGraphState(TypedDict):
     architecture_design: Dict[str, Any]
     validation_results: Dict[str, Any]
     specifications: Dict[str, Any]
+    status: str
+    
+# Example: QA Test Agent State
+class QATestGraphState(TypedDict):
+    input: str
+    code: Dict[str, Any]
+    specifications: Dict[str, Any]
+    test_requirements: Dict[str, Any]
+    test_plan: Dict[str, Any]
+    test_cases: Dict[str, Any]
+    test_code: Dict[str, str]
     status: str
 ```
 
@@ -101,10 +118,15 @@ tools/
 ├── project_manager/
 │   ├── task_breakdown.py
 │   └── resource_allocator.py
-└── solution_architect/
-    ├── technology_selector.py
-    ├── architecture_validator.py
-    └── specification_generator.py
+├── solution_architect/
+│   ├── technology_selector.py
+│   ├── architecture_validator.py
+│   └── specification_generator.py
+└── qa_test/
+    ├── test_analyzer.py
+    ├── test_planner.py
+    ├── test_generator.py
+    └── test_code_generator.py
 ```
 
 ## Agent-Specific Implementations
@@ -137,19 +159,36 @@ class SolutionArchitectAgent(BaseAgent):
         """
 ```
 
+### QA Test Agent
+Focus: Test planning, test case generation, and test code generation
+```python
+class QATestAgent(BaseAgent):
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Workflow:
+        1. Analyze test requirements from code and specifications
+        2. Create test plan 
+        3. Generate detailed test cases
+        4. Generate executable test code
+        """
+```
+
 ## Key Differences Between Agents
 
 ### State Management
 - **Project Manager**: Focuses on project structure and resource allocation
 - **Solution Architect**: Maintains complex technical state including tech stack and architecture
+- **QA Test**: Manages code, test cases, and generated test files
 
 ### LLM Integration
 - **Project Manager**: Uses core LLM service
 - **Solution Architect**: Has specialized LLM service with custom prompts
+- **QA Test**: Uses specialized LLM service for test analysis and code generation
 
 ### Tool Usage
 - **Project Manager**: Tools for project breakdown and resource management
 - **Solution Architect**: Tools for tech selection and architecture validation
+- **QA Test**: Tools for test requirement analysis, test planning, and test code generation
 
 ## Best Practices
 
@@ -189,6 +228,28 @@ async def process_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
     # Implementation
 ```
 
+## Agent-Specific Features
+
+### Project Manager Agent
+- Task breakdown into milestones
+- Resource allocation to tasks
+- Timeline estimation
+- Project plan generation
+
+### Solution Architect Agent
+- Technology stack selection
+- System architecture design
+- Architecture validation
+- Technical specification generation
+
+### QA Test Agent
+- Programming language detection
+- Test framework recommendation
+- Test case generation
+- Executable test code generation
+- Unit and integration test support
+- File output organization
+
 ## Testing and Deployment
 
 1. Test agent in isolation
@@ -213,6 +274,11 @@ async def process_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
    - Validate state before transitions
    - Handle incomplete states
    - Log state changes
+
+4. **Language/Framework Detection**
+   - Provide fallbacks for detection failures
+   - Allow manual specification of languages/frameworks
+   - Log detection process for debugging
 
 ## Next Steps
 
