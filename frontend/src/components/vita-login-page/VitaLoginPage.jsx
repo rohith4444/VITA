@@ -22,6 +22,9 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
         defaultState = STATES.MAIN
     }
 
+    const firstName = "Firstname"
+    const lastName = "Lastname"
+
     const [chatId, setChatId] = useState(defaultChatId);
     const [projectId, setProjectId] = useState(defaultProjectId);
     const [sidebarExpanded, setSidebarExpanded] = useState(true);
@@ -31,7 +34,8 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
     const [isRecentChats, setIsRecentChats] = useState(false);
     const [messages, setMessages] = useState([]);
     const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-
+    const [attachedFiles, setAttachedFiles] = useState([]);
+    const fileInputRef = useRef();
     const lastMessageRef = useRef(null);
     const chatBoxRef = useRef(null);
 
@@ -55,6 +59,33 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
 
     const handleMouseLeaveChats = () => {
         setChatsHovered(false);
+    };
+
+    const onStartNewChat = (message) => {
+        setState(STATES.CHAT);
+        var msg = { sender: "user", text: message };
+        var recievedMsg = { sender: "llm", text: "This is a llm generated message and this is a very long message to see how the long messages generally work on this screen" };
+        setMessages([msg, recievedMsg]);
+    }
+
+    const updateMessages = (message) => {
+        var msg = { sender: "user", text: message };
+        var recievedMsg = { sender: "llm", text: "This is a llm generated message and this is a very long message to see how the long messages generally work on this screen" };
+        setMessages([...messages, msg, recievedMsg]);
+    }
+
+    const onFileChange = (event) => {
+        if (event.target.files) {
+            setAttachedFiles([...attachedFiles, event.target.files[0]]);
+        }
+    };
+
+    const deleteFile = (fileName) => {
+        setAttachedFiles((prevFiles) => prevFiles.filter(file => file.name !== fileName));
+    }
+
+    // On file upload (click the upload button)
+    const onFileUpload = () => {
     };
 
     return (
@@ -91,11 +122,11 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
                             </div>
                         </div>
                         {sidebarExpanded && <div className="sidebar-project-list">
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-1</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-2</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-3</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-4</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-5</a>
+                            {
+                                [...Array(5)].map((_, i) => {
+                                    return <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-{i+1}</a>
+                                })
+                            }
                             <a href="#" className="last" onClick={() => {setState(STATES.ALL_CHATS);setIsRecentChats(false);}}>
                                 view all<ArrowForwardRounded fontSize="small" />
                             </a>
@@ -107,23 +138,36 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
                             </div>
                         </div>
                         {sidebarExpanded && <div className="sidebar-project-list">
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-1</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-2</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-3</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-4</a>
-                            <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-5</a>
+                            {
+                                [...Array(5)].map((_, i) => {
+                                    return <a href="#" className="sidebar-project-item" onClick={() => setState(STATES.CHAT)}>Chat-{i+1}</a>
+                                })
+                            }
                             <a href="#" className="last" onClick={() => {setState(STATES.ALL_CHATS);setIsRecentChats(true);}}>
                                 view all<ArrowForwardRounded fontSize="small" />
                             </a>
                         </div>}
                     </nav>
                     <div className="sidebar-profile-section">
-                        <div className="sidebar-profile-icon">FL</div>
-                        {sidebarExpanded && <div className="sidebar-profile-name">Firstname Lastname</div>}
+                        <div className="sidebar-profile-icon">{firstName[0]}{lastName[0]}</div>
+                        {sidebarExpanded && <div className="sidebar-profile-name">{firstName} {lastName}</div>}
                     </div>
                 </div>
                 <div className="chatbox" ref={chatBoxRef}>
-                    {state === STATES.MAIN && <Main setStateProject={() => setState(STATES.PROJECT)} />}
+                    {state === STATES.MAIN && 
+                        <Main 
+                            setStateProject={() => setState(STATES.PROJECT)} 
+                            messages={messages} 
+                            lastMessageRef={lastMessageRef} 
+                            onStartNewChat={onStartNewChat}
+                            updateMessages={updateMessages}
+                            attachedFiles={attachedFiles}
+                            onFileChange={onFileChange}
+                            deleteFile={deleteFile}
+                            onFileUpload={onFileUpload}
+                            fileInputRef={fileInputRef}
+                        />
+                    }
                     {state === STATES.PROJECT &&
                         <IndividualProject
                             setStateAllProjects={() => setState(STATES.ALL_PROJECTS)}
@@ -136,7 +180,20 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
                     {state === STATES.RECENT &&
                         <ChatInterface messages={messages} lastMessageRef={lastMessageRef} />
                     }
-                    {state === STATES.CHAT && <Chat rightSidebarOpen={rightSidebarOpen} setRightSidebarOpen={setRightSidebarOpen} />}
+                    {state === STATES.CHAT && 
+                        <Chat 
+                            rightSidebarOpen={rightSidebarOpen} 
+                            setRightSidebarOpen={setRightSidebarOpen} 
+                            messages={messages}
+                            updateMessages={updateMessages}
+                            attachedFiles={attachedFiles}
+                            onFileChange={onFileChange}
+                            deleteFile={deleteFile}
+                            onFileUpload={onFileUpload}
+                            fileInputRef={fileInputRef}
+                            lastMessageRef={lastMessageRef}
+                        />
+                    }
                     {state === STATES.ALL_CHATS && <AllChats isRecentChats={isRecentChats} />}
                 </div>
             </div>

@@ -3,6 +3,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: var(--bg-primary-light);
+}
+
+.login-card-container {
+  width: 50%;
+  display: flex;
 }
 
 .login-card {
@@ -12,6 +18,7 @@
   padding: 2%;
   display: flex;
   flex-wrap: wrap;
+  flex-direction: column;
   gap: 20px;
 }
 
@@ -25,7 +32,12 @@
 }
 
 .login-form-field {
-  width: 100%;
+  display: flex;
+  flex-grow: 1;
+}
+
+.login-button {
+  justify-content: right;
 }
 
 .password {
@@ -34,11 +46,13 @@
 
 .forgot-password {
   text-align: right;
+  justify-content: right;
   font-size: smaller;
 }
 
 .forgot-password p {
   margin: 0px;
+  cursor: pointer;
 }
 
 .tabs {

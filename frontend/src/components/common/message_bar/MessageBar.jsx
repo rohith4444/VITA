@@ -61,7 +61,8 @@ const MessageBar = ({ attachedFiles, onFileChange, fileInputRef, deleteFile, onS
                     <div className="min-container-input-meta-send-message">
                     <input type="file" onChange={onFileChange} multiple ref={fileInputRef} hidden />
                     <AttachFileOutlined onClick={() => fileInputRef.current.click()} />
-                    <Send sx={{ transform: "rotate(-90deg)" }} onClick={sendMessage}/>
+                    <Send onClick={sendMessage}/>
+                    {/* sx={{ transform: "rotate(-90deg)" }} */}
                     </div>
                 </div>
             </div>

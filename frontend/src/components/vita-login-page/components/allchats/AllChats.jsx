@@ -15,7 +15,7 @@ const AllChats = ({ isRecentChats }) => {
                 </div>
                 <div className="allchats_container">
                     {Array.from({ length: 3 }).map((_, index) => (
-                    <div className="chat_card" key={index}>
+                    <div className="chat_card card" key={index}>
                         <h3 className="chat_card_heading">Project Structure for AI Agents and Tools</h3>
                         <p className="chat_card_time">4 hours ago</p>
                     </div>
