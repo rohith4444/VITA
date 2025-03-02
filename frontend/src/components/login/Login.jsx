@@ -20,7 +20,7 @@ const Login = () => {
 
   return (
     <>
-      {/* <Header /> */}
+      <Header />
       <div className="landing-container">
         <div className="login-card-container">
           <div className="card login-card">
@@ -34,7 +34,7 @@ const Login = () => {
                 indicatorColor="secondary"
                 textColor="secondary"
                 variant="fullWidth"
-                aria-label="full width tabs example"
+                aria-label="full width secondary tabs example"
               >
                 <Tab value="login" label="Login" id='full-width-tab-0' aria-controls='full-width-tabpanel-0' />
                 <Tab value="register" label="Register" id='full-width-tab-1' aria-controls='full-width-tabpanel-1' />

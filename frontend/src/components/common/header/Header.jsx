@@ -8,10 +8,12 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { Menu, MenuItem } from "@mui/material";
 import { AppBar, Toolbar, Button, Typography } from "@mui/material";
-import { ArrowRight, Menu as MenuIcon } from "@mui/icons-material";
+import { ArrowRight, MenuRounded as MenuIcon } from "@mui/icons-material";
 import { Route, useNavigate } from "react-router-dom";
+import { useTheme } from '@mui/material/styles';
 
 export default function Header() {
+    const theme = useTheme();
 
     const [anchorEl, setAnchorEl] = useState(null);
     const [open, setOpen] = useState(false);
@@ -55,8 +57,8 @@ export default function Header() {
     return (
         <div class="header">
             <div class="icon" onClick={() => navigate("/")}>
-                <Logo width={50} height={70} strokeWidth={15} />
-                <h4>AETHER AI</h4>
+                <Logo width={50} height={70} strokeWidth={15} stroke={theme.palette.secondary.dark} />
+                <h2>AETHER AI</h2>
             </div>
             <div class="navBar">
                 <Stack spacing={3} direction="row" sx={{alignItems: "center"}}>
@@ -76,17 +78,19 @@ export default function Header() {
                     <CustomLink href="/research" version="v1" underline="hover">Research</CustomLink>
                     <CustomLink href="/company" version="v1" underline="hover">Company</CustomLink>
                     <CustomLink href="/news" version="v1" underline="hover">News</CustomLink>
-                    <CustomButton version="v1" onClick={() => navigate("/login")}>Try Vita</CustomButton>
+                    <CustomButton version="v1" bgColor={theme.palette.secondary.main} onClick={() => navigate("/login")}>Try Vita</CustomButton>
                 </Stack>
             </div>
             <div class="navBarMenu">
-                <CustomButton
-                    version='v1'
+                {/* <CustomButton
+                    version='v2'
+                    bgColor={theme.palette.secondary.main}
                     onClick={handleMenuOpen}
                     startIcon={<MenuIcon />}
                     >
-                        Menu
-                    </CustomButton>
+                        <MenuIcon />
+                    </CustomButton> */}
+                    <MenuIcon fontSize="large" color={theme.palette.secondary.main} onClick={handleMenuOpen} />
                 {/* Main Menu */}
                 <Menu className="menuDropdown" anchorEl={anchorEl1} open={Boolean(anchorEl1)} onClose={handleMenuClose}>
                     <Stack spacing={1} direction="column" sx={{alignItems: "center"}}>
@@ -106,7 +110,7 @@ export default function Header() {
                         <CustomLink href="#" version="v1" underline="hover">Research</CustomLink>
                         <CustomLink href="#" version="v1" underline="hover">Company</CustomLink>
                         <CustomLink href="#" version="v1" underline="hover">News</CustomLink>
-                        <CustomButton variant="contained" version="v1" onClick={() => navigate("/login")}>Try Vita</CustomButton>
+                        <CustomButton variant="contained" bgColor={theme.palette.secondary.main} version="v1" onClick={() => navigate("/login")}>Try Vita</CustomButton>
                     </Stack>
                 </Menu>
 

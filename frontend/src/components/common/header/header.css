@@ -1,5 +1,5 @@
 .header {
-    background-color: var(--bg-navbar-light);
+    background-color: var(--bg-primary-light);
     padding: 0px 90px;
     top: 0;
     width: calc(100% - 180px);
@@ -7,9 +7,10 @@
     z-index: 999;
     display: flex;
     justify-content: space-between;
+    /* border-bottom: 0.5px solid lightgray; */
 }
 
-.header h4 {
+.header h2 {
     font-size: 40px;
     font-weight: 300;
     margin: 0px;

@@ -58,3 +58,9 @@
 .tabs {
   width: 100%;
 }
+
+@media (max-width: 1000px) {
+  .login-card-container {
+    width: 90%;
+  }
+}

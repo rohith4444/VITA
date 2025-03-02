@@ -7,6 +7,7 @@ import ChatInterface from "../chat-interface/ChatInterface";
 import AllChats from "./components/allchats/AllChats";
 import Chat from "./components/chat/Chat";
 import IndividualProject from "./components/projects/IndividualProject";
+import { useNavigate } from "react-router-dom";
 
 const STATES = {
     MAIN: 'main',
@@ -38,6 +39,7 @@ const VitaLoginPage = ({ defaultState, defaultChatId, defaultProjectId, ...props
     const fileInputRef = useRef();
     const lastMessageRef = useRef(null);
     const chatBoxRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (chatBoxRef.current) {
