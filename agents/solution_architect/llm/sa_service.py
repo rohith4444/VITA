@@ -3,7 +3,7 @@ import json
 from openai import AsyncOpenAI
 from backend.config import Config
 from agents.core.monitoring.decorators import monitor_llm, monitor_operation
-from agents.solution_architect.llm.prompts import (
+from agents.solution_architect.llm.sa_prompts import (
     format_architecture_requirements_prompt,
     format_tech_stack_prompt,
     format_architecture_design_prompt,

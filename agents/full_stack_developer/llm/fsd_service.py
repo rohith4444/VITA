@@ -5,7 +5,7 @@ from backend.config import Config
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_class
 from agents.core.monitoring.decorators import monitor_llm, monitor_operation
-from .prompts import (
+from .fsd_prompts import (
     format_requirements_analysis_prompt,
     format_solution_design_prompt,
     format_code_generation_prompt,

@@ -17,8 +17,8 @@ import signal
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method, tracing_service
 from memory.memory_manager import MemoryManager
-from agents.project_manager.agent import ProjectManagerAgent
-from agents.project_manager.state_graph import create_initial_state
+from agents.project_manager.pm_agent import ProjectManagerAgent
+from agents.project_manager.pm_state_graph import create_initial_state
 from backend.config import config
 from agents.core.monitoring.service import monitoring_service
 

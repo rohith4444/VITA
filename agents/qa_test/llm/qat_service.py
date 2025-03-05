@@ -5,7 +5,7 @@ from backend.config import Config
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_class
 from agents.core.monitoring.decorators import monitor_llm, monitor_operation
-from .prompts import (
+from .qat_prompts import (
     format_test_requirements_analysis_prompt,
     format_test_planning_prompt,
     format_test_case_generation_prompt,

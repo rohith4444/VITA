@@ -5,10 +5,10 @@ from langgraph.graph import StateGraph
 from core.logging.logger import setup_logger
 from agents.core.monitoring.decorators import monitor_operation
 from agents.core.base_agent import BaseAgent
-from agents.project_manager.llm.service import LLMService
+from agents.project_manager.llm.pm_service import LLMService
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
-from .state_graph import ProjectManagerGraphState
+from .pm_state_graph import ProjectManagerGraphState
 from tools.project_manager.generate_task_breakdown import generate_task_breakdown
 from tools.project_manager.resource_allocator import allocate_resources
 from tools.project_manager.timeline_generator import estimate_time

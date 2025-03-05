@@ -5,11 +5,11 @@ from langgraph.graph import StateGraph
 from core.logging.logger import setup_logger
 from agents.core.monitoring.decorators import monitor_operation, monitor_llm
 from agents.core.base_agent import BaseAgent
-from agents.solution_architect.llm.service import LLMService
+from agents.solution_architect.llm.sa_service import LLMService
 from agents.core.graph.graph_builder import WorkflowGraphBuilder  
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
-from .state_graph import SolutionArchitectGraphState, validate_state, get_next_stage
+from .sa_state_graph import SolutionArchitectGraphState, validate_state, get_next_stage
 from tools.solution_architect.technology_selector import select_tech_stack
 from tools.solution_architect.architecture_validator import validate_architecture
 from tools.solution_architect.specification_generator import generate_specifications

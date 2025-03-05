@@ -5,10 +5,10 @@ import json
 import importlib
 from agents.core.base_agent import BaseAgent
 from memory.memory_manager import MemoryManager
-from agents.project_manager.agent import ProjectManagerAgent
-from agents.solution_architect.agent import SolutionArchitectAgent
-from agents.full_stack_developer.agent import FullStackDeveloperAgent
-from agents.qa_test.agent import QATestAgent
+from agents.project_manager.pm_agent import ProjectManagerAgent
+from agents.solution_architect.sa_agent import SolutionArchitectAgent
+from agents.full_stack_developer.fsd_agent import FullStackDeveloperAgent
+from agents.qa_test.qat_agent import QATestAgent
 from agents.core.monitoring.decorators import monitor_operation
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_class, trace_method

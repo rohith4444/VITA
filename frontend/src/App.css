@@ -10,7 +10,8 @@
   --text-secondary-light: #543A14;
   --text-secondary-dark: #F0BB78;
 
-  --bg-primary-light: #FFF0DC;
+  /* --bg-primary-light: rgb(252, 251, 248); */
+  --bg-primary-light: #F2F1EA;
   --bg-primary-dark: #131010;
 
   --bg-secondary-light: rgb(212, 212, 212);

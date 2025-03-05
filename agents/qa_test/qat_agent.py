@@ -7,8 +7,8 @@ from agents.core.monitoring.decorators import monitor_operation
 from agents.core.base_agent import BaseAgent
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
-from .state_graph import QATestGraphState, validate_state, get_next_stage
-from .llm.service import QATestLLMService
+from .qat_state_graph import QATestGraphState, validate_state, get_next_stage
+from .llm.qat_service import QATestLLMService
 from tools.qa_test.test_analyzer import analyze_test_requirements
 from tools.qa_test.test_planner import create_test_plan, prioritize_tests
 from tools.qa_test.test_generator import generate_test_cases

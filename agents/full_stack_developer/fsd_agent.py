@@ -8,8 +8,8 @@ from agents.core.base_agent import BaseAgent
 from agents.core.graph.graph_builder import WorkflowGraphBuilder
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
-from .state_graph import FullStackDeveloperGraphState, validate_state, get_next_stage
-from .llm.service import LLMService
+from .fsd_state_graph import FullStackDeveloperGraphState, validate_state, get_next_stage
+from .llm.fsd_service import LLMService
 from tools.full_stack_developer.requirement_analyzer import analyze_requirements
 from tools.full_stack_developer.solution_designer import design_solution
 from tools.full_stack_developer.code_generator import generate_code

@@ -13,7 +13,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # Import agents
-from agents.solution_architect.agent import SolutionArchitectAgent
+from agents.solution_architect.sa_agent import SolutionArchitectAgent
 from memory.memory_manager import MemoryManager
 from backend.config import config
 from core.logging.logger import setup_logger
