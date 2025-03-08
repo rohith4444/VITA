@@ -9,12 +9,15 @@ from .qat_prompts import (
     format_test_requirements_analysis_prompt,
     format_test_planning_prompt,
     format_test_case_generation_prompt,
-    format_test_code_generation_prompt
+    format_test_code_generation_prompt,
+    format_feedback_processing_prompt,
+    format_status_report_prompt,
+    format_deliverable_packaging_prompt
 )
 
 @trace_class
 class QATestLLMService:
-    """Service for handling LLM interactions specific to QA/Test operations."""
+    """Service for handling LLM interactions specific to QA/Test operations with Team Lead coordination."""
     
     def __init__(self, model: str = "gpt-4"):
         """
@@ -74,17 +77,43 @@ class QATestLLMService:
         """
         self.logger.debug("Parsing LLM response")
         try:
-            parsed_response = json.loads(response)
+            # Extract JSON content from the response if needed
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                # Extract JSON part
+                json_content = response[json_start:json_end]
+                parsed_response = json.loads(json_content)
+            else:
+                # Try parsing the whole response
+                parsed_response = json.loads(response)
             
             if expected_keys:
                 missing_keys = [key for key in expected_keys if key not in parsed_response]
                 if missing_keys:
-                    raise ValueError(f"Response missing expected keys: {missing_keys}")
+                    self.logger.warning(f"Response missing expected keys: {missing_keys}")
+                    
+                    # Try to salvage what we can and fill in missing keys with defaults
+                    for key in missing_keys:
+                        if isinstance(key, str):
+                            if "test" in key or "requirements" in key:
+                                parsed_response[key] = []
+                            elif "plan" in key:
+                                parsed_response[key] = {}
+                            else:
+                                parsed_response[key] = ""
             
             self.logger.debug("Successfully parsed LLM response")
             return parsed_response
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse LLM response: {str(e)}", exc_info=True)
+            # Try to create a structured response from unstructured text
+            if response:
+                return {"text": response, "parsing_error": str(e)}
+            raise
+        except Exception as e:
+            self.logger.error(f"Error processing LLM response: {str(e)}", exc_info=True)
             raise
         
     async def _create_chat_completion(
@@ -135,15 +164,21 @@ class QATestLLMService:
         self, 
         code: Dict[str, Any], 
         specifications: Dict[str, Any],
-        input_description: str
+        input_description: str,
+        components_to_test: Optional[Dict[str, Any]] = None,
+        dependencies: Optional[Dict[str, List[str]]] = None,
+        task_priority: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze code and specifications to determine test requirements.
         
         Args:
-            code (Dict[str, Any]): Code to be tested
-            specifications (Dict[str, Any]): Technical specifications
-            input_description (str): Project description and requirements
+            code: Code to be tested
+            specifications: Technical specifications
+            input_description: Project description and requirements
+            components_to_test: Specific components to test, as directed by Team Lead
+            dependencies: Component dependencies for integration testing
+            task_priority: Priority level from Team Lead (HIGH/MEDIUM/LOW)
             
         Returns:
             Dict[str, Any]: Structured test requirements
@@ -157,7 +192,10 @@ class QATestLLMService:
             formatted_prompt = format_test_requirements_analysis_prompt(
                 code=code,
                 specifications=specifications,
-                input_description=input_description
+                input_description=input_description,
+                components_to_test=components_to_test,
+                dependencies=dependencies,
+                task_priority=task_priority
             )
 
             response_content = await self._create_chat_completion(
@@ -194,12 +232,19 @@ class QATestLLMService:
             }
         }
     )
-    async def create_test_plan(self, test_requirements: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_test_plan(
+        self, 
+        test_requirements: Dict[str, Any],
+        task_priority: Optional[str] = None,
+        project_structure: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Create a test plan based on the analyzed requirements.
         
         Args:
-            test_requirements (Dict[str, Any]): Analyzed test requirements
+            test_requirements: Analyzed test requirements
+            task_priority: Priority level from Team Lead (HIGH/MEDIUM/LOW)
+            project_structure: Project structure information from Team Lead
             
         Returns:
             Dict[str, Any]: Structured test plan
@@ -210,7 +255,11 @@ class QATestLLMService:
         self.logger.info("Starting test plan creation")
         
         try:
-            formatted_prompt = format_test_planning_prompt(test_requirements)
+            formatted_prompt = format_test_planning_prompt(
+                test_requirements=test_requirements,
+                task_priority=task_priority,
+                project_structure=project_structure
+            )
 
             response_content = await self._create_chat_completion(
                 messages=[
@@ -250,15 +299,19 @@ class QATestLLMService:
         self, 
         test_plan: Dict[str, Any], 
         code: Dict[str, Any],
-        test_requirements: Dict[str, Any]
+        test_requirements: Dict[str, Any],
+        components_to_test: Optional[Dict[str, Any]] = None,
+        project_structure: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Generate detailed test cases based on the test plan.
         
         Args:
-            test_plan (Dict[str, Any]): Test planning details
-            code (Dict[str, Any]): Code to be tested
-            test_requirements (Dict[str, Any]): Analyzed test requirements
+            test_plan: Test planning details
+            code: Code to be tested
+            test_requirements: Analyzed test requirements
+            components_to_test: Specific components to test, as directed by Team Lead
+            project_structure: Project structure information from Team Lead
             
         Returns:
             Dict[str, Any]: Structured test cases
@@ -272,7 +325,9 @@ class QATestLLMService:
             formatted_prompt = format_test_case_generation_prompt(
                 test_plan=test_plan,
                 code=code,
-                test_requirements=test_requirements
+                test_requirements=test_requirements,
+                components_to_test=components_to_test,
+                project_structure=project_structure
             )
 
             response_content = await self._create_chat_completion(
@@ -314,16 +369,18 @@ class QATestLLMService:
         test_cases: Dict[str, Any], 
         code: Dict[str, Any],
         programming_language: str,
-        test_framework: str
+        test_framework: str,
+        project_structure: Optional[Dict[str, Any]] = None
     ) -> Dict[str, str]:
         """
         Generate executable test code based on test cases.
         
         Args:
-            test_cases (Dict[str, Any]): Test case specifications
-            code (Dict[str, Any]): Code to be tested
-            programming_language (str): Target programming language (e.g., "javascript", "python")
-            test_framework (str): Testing framework to use (e.g., "jest", "pytest")
+            test_cases: Test case specifications
+            code: Code to be tested
+            programming_language: Target programming language (e.g., "javascript", "python")
+            test_framework: Testing framework to use (e.g., "jest", "pytest")
+            project_structure: Project structure information from Team Lead
             
         Returns:
             Dict[str, str]: Dictionary of test file names and their contents
@@ -338,7 +395,8 @@ class QATestLLMService:
                 test_cases=test_cases,
                 code=code,
                 programming_language=programming_language,
-                test_framework=test_framework
+                test_framework=test_framework,
+                project_structure=project_structure
             )
 
             response_content = await self._create_chat_completion(
@@ -369,7 +427,7 @@ class QATestLLMService:
         Parse the test code response from LLM.
         
         Args:
-            response (str): Raw response from LLM
+            response: Raw response from LLM
             
         Returns:
             Dict[str, str]: Dictionary of test file names and their contents
@@ -409,4 +467,211 @@ class QATestLLMService:
             raise ValueError(f"Failed to parse test code response as JSON: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error parsing test code response: {str(e)}", exc_info=True)
+            raise
+
+    @monitor_llm(
+        run_name="process_feedback",
+        metadata={
+            "operation_details": {
+                "prompt_template": "feedback_processing",
+                "max_tokens": 2000,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def process_feedback(
+        self,
+        feedback: Dict[str, Any],
+        test_plan: Dict[str, Any],
+        test_cases: Dict[str, Any],
+        test_code: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """
+        Process feedback from Team Lead and determine necessary changes.
+        
+        Args:
+            feedback: Feedback received from Team Lead
+            test_plan: Current test plan
+            test_cases: Current test cases
+            test_code: Current test code
+            
+        Returns:
+            Dict[str, Any]: Analysis and change recommendations
+            
+        Raises:
+            Exception: If feedback processing fails
+        """
+        self.logger.info("Starting feedback processing")
+        
+        try:
+            formatted_prompt = format_feedback_processing_prompt(
+                feedback=feedback,
+                test_plan=test_plan,
+                test_cases=test_cases,
+                test_code=test_code
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled QA engineer with expertise in refining test artifacts based on feedback."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=2000
+            )
+
+            # Parse response with expected keys validation
+            feedback_analysis = await self._parse_llm_response(
+                response_content,
+                expected_keys=['feedback_analysis', 'test_plan_changes', 'test_case_changes', 'test_code_changes']
+            )
+            
+            self.logger.info("Feedback processing completed successfully")
+            self.logger.debug(f"Feedback analysis contains {len(feedback_analysis.get('test_plan_changes', []))} plan changes, {len(feedback_analysis.get('test_case_changes', []))} case changes, and {len(feedback_analysis.get('test_code_changes', []))} code changes")
+
+            return feedback_analysis
+            
+        except Exception as e:
+            self.logger.error(f"Error in feedback processing: {str(e)}", exc_info=True)
+            raise
+
+    @monitor_llm(
+        run_name="generate_status_report",
+        metadata={
+            "operation_details": {
+                "prompt_template": "status_report",
+                "max_tokens": 2000,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def generate_status_report(
+        self,
+        test_requirements: Dict[str, Any],
+        test_plan: Dict[str, Any],
+        test_cases: Dict[str, Any],
+        test_code: Dict[str, str],
+        task_id: str,
+        components_to_test: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a status report for Team Lead.
+        
+        Args:
+            test_requirements: Analyzed test requirements
+            test_plan: Test planning details
+            test_cases: Generated test cases
+            test_code: Generated test code
+            task_id: ID of the task assigned by Team Lead
+            components_to_test: Specific components being tested
+            
+        Returns:
+            Dict[str, Any]: Structured status report
+            
+        Raises:
+            Exception: If status report generation fails
+        """
+        self.logger.info("Starting status report generation")
+        
+        try:
+            formatted_prompt = format_status_report_prompt(
+                test_requirements=test_requirements,
+                test_plan=test_plan,
+                test_cases=test_cases,
+                test_code=test_code,
+                task_id=task_id,
+                components_to_test=components_to_test
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled QA engineer with expertise in reporting test status and results."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=2000
+            )
+
+            # Parse response with expected keys validation
+            status_report = await self._parse_llm_response(
+                response_content,
+                expected_keys=['task_id', 'completion_status', 'coverage_analysis', 'key_findings']
+            )
+            
+            self.logger.info("Status report generation completed successfully")
+            self.logger.debug(f"Status report indicates {status_report.get('completion_status', '0%')} completion with {len(status_report.get('key_findings', []))} key findings")
+
+            return status_report
+            
+        except Exception as e:
+            self.logger.error(f"Error in status report generation: {str(e)}", exc_info=True)
+            raise
+
+    @monitor_llm(
+        run_name="package_deliverable",
+        metadata={
+            "operation_details": {
+                "prompt_template": "deliverable_packaging",
+                "max_tokens": 2000,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def package_deliverable(
+        self,
+        test_requirements: Dict[str, Any],
+        test_plan: Dict[str, Any],
+        test_cases: Dict[str, Any],
+        test_code: Dict[str, str],
+        task_id: str
+    ) -> Dict[str, Any]:
+        """
+        Package test artifacts as a deliverable for Team Lead.
+        
+        Args:
+            test_requirements: Analyzed test requirements
+            test_plan: Test planning details
+            test_cases: Generated test cases
+            test_code: Generated test code
+            task_id: ID of the task assigned by Team Lead
+            
+        Returns:
+            Dict[str, Any]: Structured deliverable package
+            
+        Raises:
+            Exception: If deliverable packaging fails
+        """
+        self.logger.info("Starting deliverable packaging")
+        
+        try:
+            formatted_prompt = format_deliverable_packaging_prompt(
+                test_requirements=test_requirements,
+                test_plan=test_plan,
+                test_cases=test_cases,
+                test_code=test_code,
+                task_id=task_id
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled QA engineer with expertise in packaging test deliverables."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=2000
+            )
+
+            # Parse response with expected keys validation
+            deliverable_package = await self._parse_llm_response(
+                response_content,
+                expected_keys=['deliverable_id', 'task_id', 'summary', 'traceability_matrix']
+            )
+            
+            self.logger.info("Deliverable packaging completed successfully")
+            self.logger.debug(f"Deliverable package created with ID: {deliverable_package.get('deliverable_id', 'unknown')}")
+
+            return deliverable_package
+            
+        except Exception as e:
+            self.logger.error(f"Error in deliverable packaging: {str(e)}", exc_info=True)
             raise
