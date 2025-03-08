@@ -2,6 +2,7 @@ from typing import Dict, List, Any, Optional, Tuple
 import asyncio
 from datetime import datetime
 import json
+import os
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method, trace_class
 from agents.core.base_agent import BaseAgent
@@ -23,6 +24,14 @@ from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
 from agents.core.monitoring.decorators import monitor_operation
 
+# Import Code Assembler if available
+try:
+    from agents.code_assembler.ca_agent import CodeAssemblerAgent
+    HAS_CODE_ASSEMBLER = True
+except ImportError:
+    HAS_CODE_ASSEMBLER = False
+    setup_logger("team_lead.agent").warning("CodeAssemblerAgent not available, advanced compilation disabled")
+
 # Initialize logger
 logger = setup_logger("team_lead.agent")
 
@@ -42,6 +51,8 @@ class TeamLeadAgent(BaseAgent):
         registered_agents (Dict[str, Dict[str, Any]]): Information about available agents
         active_tasks (Dict[str, Dict[str, Any]]): Currently active tasks
         project_name (str): Name of the current project
+        has_code_assembler (bool): Whether the Code Assembler Agent is available
+        code_assembler_agent (Optional[CodeAssemblerAgent]): Code Assembler Agent instance
     """
     
     def __init__(self, agent_id: str, name: str, memory_manager: MemoryManager):
@@ -61,9 +72,8 @@ class TeamLeadAgent(BaseAgent):
             # Initialize LLM service
             self.llm_service = TeamLeadLLMService()
             
-            # Initialize communication and compilation tools
+            # Initialize communication tools
             self.agent_communicator = AgentCommunicator()
-            self.result_compiler = ResultCompiler()
             
             # Register self with agent communicator
             self.agent_communicator.register_agent(agent_id)
@@ -73,13 +83,64 @@ class TeamLeadAgent(BaseAgent):
             self.active_tasks = {}
             self.project_name = f"project_{agent_id}"
             
+            # Check Code Assembler availability
+            self.has_code_assembler = HAS_CODE_ASSEMBLER
+            self.code_assembler_agent = None
+            
+            # Initialize result compiler with memory manager for Code Assembler integration
+            self.result_compiler = ResultCompiler(memory_manager=memory_manager if self.has_code_assembler else None)
+            
+            if self.has_code_assembler:
+                self.logger.info("Code Assembler Agent is available for advanced project compilation")
+            else:
+                self.logger.info("Code Assembler Agent not available, will use basic compilation")
+            
             # Build the processing graph
             self.graph = self._build_graph()
             self.logger.info("TeamLeadAgent initialization completed")
             
+            # Initialize specialized agents (async initialization handled in run method)
+            self._specialized_agents_initialized = False
+            
         except Exception as e:
             self.logger.error(f"Failed to initialize TeamLeadAgent: {str(e)}", exc_info=True)
             raise
+
+    async def initialize_agents(self):
+        """Initialize and register specialized agents."""
+        if self._specialized_agents_initialized:
+            return
+            
+        try:
+            self.logger.info("Initializing specialized agents")
+            
+            # Initialize Code Assembler Agent if available
+            if self.has_code_assembler:
+                self.logger.info("Initializing Code Assembler Agent")
+                code_assembler_id = f"code_assembler_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                self.code_assembler_agent = CodeAssemblerAgent(
+                    agent_id=code_assembler_id,
+                    name="Code Assembler",
+                    memory_manager=self.memory_manager
+                )
+                self.logger.info(f"Code Assembler Agent initialized with ID: {code_assembler_id}")
+                
+                # Register Code Assembler with agent communicator
+                self.agent_communicator.register_agent(code_assembler_id)
+                
+                # Add to registered agents
+                self.registered_agents[code_assembler_id] = {
+                    "agent_type": "code_assembler",
+                    "strengths": ["code integration", "dependency resolution", "project assembly"],
+                    "id": code_assembler_id
+                }
+            
+            self._specialized_agents_initialized = True
+            self.logger.info("Specialized agents initialization completed")
+            
+        except Exception as e:
+            self.logger.error(f"Error initializing specialized agents: {str(e)}", exc_info=True)
+            self._specialized_agents_initialized = False
 
     def _build_graph(self):
         """Build the LangGraph-based execution flow for Team Lead Agent."""
@@ -145,64 +206,6 @@ class TeamLeadAgent(BaseAgent):
         if not hasattr(self, '_graph_builder'):
             self._build_graph()  # This will create and store the builder
         return self._graph_builder
-    
-    @trace_method
-    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Execute the Team Lead Agent's workflow.
-        
-        Args:
-            input_data: Input containing project description and plan
-            
-        Returns:
-            Dict[str, Any]: Final results of the team lead process
-        """
-        self.logger.info("Starting TeamLead workflow execution")
-        try:
-            # Ensure input contains required fields
-            if "input" not in input_data:
-                raise ValueError("Input must contain 'input' field with project description")
-                
-            if "project_plan" not in input_data:
-                raise ValueError("Input must contain 'project_plan' field with project plan")
-            
-            self.logger.debug(f"Input data: {str(input_data)[:200]}...")
-            
-            # Create initial state
-            initial_state = {
-                "input": input_data["input"],
-                "project_plan": input_data["project_plan"],
-                "tasks": [],
-                "execution_plan": {},
-                "agent_assignments": {},
-                "progress": {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "completion_percentage": 0,
-                    "milestone_progress": [],
-                    "task_summary": {
-                        "total": 0,
-                        "completed": 0,
-                        "in_progress": 0,
-                        "blocked": 0,
-                        "pending": 0
-                    }
-                },
-                "deliverables": {},
-                "compilation_result": {},
-                "status": "initialized"
-            }
-            
-            # Execute graph
-            self.logger.debug("Starting graph execution")
-            result = await self.graph.ainvoke(initial_state)
-            
-            self.logger.info("Workflow completed successfully")
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error during workflow execution: {str(e)}", exc_info=True)
-            raise
     
     # State transition condition methods
     
@@ -339,6 +342,9 @@ class TeamLeadAgent(BaseAgent):
             
             self.logger.debug(f"Extracted input data: {input_data[:200]}...")
             self.logger.debug(f"Project plan: {str(project_plan)[:200]}...")
+            
+            # Initialize specialized agents if not already done
+            await self.initialize_agents()
             
             # Store initial request in memory
             memory_entry = {
@@ -778,8 +784,22 @@ class TeamLeadAgent(BaseAgent):
             agent_assignments = state["agent_assignments"]
             deliverables = state.get("deliverables", {})
             
+            # Initialize result compiler if not already done
+            if not hasattr(self, 'result_compiler') or self.result_compiler is None:
+                self.result_compiler = ResultCompiler(memory_manager=self.memory_manager if self.has_code_assembler else None)
+                
+                # Create project
+                self.result_compiler.create_project(
+                    project_name=self.project_name,
+                    project_type=ProjectType.GENERIC
+                )
+            
             # For each agent, collect pending deliverables
             for agent_id, agent_tasks in agent_assignments.items():
+                # Skip Code Assembler agent when collecting deliverables
+                if self.has_code_assembler and agent_id == self.code_assembler_agent.agent_id:
+                    continue
+                    
                 # Get pending deliverables from the agent
                 pending_deliverables = self.agent_communicator.get_pending_deliverables(agent_id)
                 
@@ -868,12 +888,19 @@ class TeamLeadAgent(BaseAgent):
             # Update state with collected deliverables
             state["deliverables"] = deliverables
             
-            # Check if we have all expected deliverables
-            total_tasks = len(tasks)
-            collected_deliverables = len(deliverables)
-            collection_percentage = (collected_deliverables / total_tasks) * 100 if total_tasks > 0 else 0
-            
-            self.logger.info(f"Deliverable collection completed: {collected_deliverables}/{total_tasks} ({collection_percentage:.1f}%)")
+            # Check if we are ready for compilation
+            if self._is_ready_for_compilation(state):
+                # Prepare for compilation
+                await self.update_status("compiling_results")
+                state["status"] = "compiling_results"
+                self.logger.info("Ready for compilation, transitioning to compile_results phase")
+            else:
+                # Report on collection progress
+                total_tasks = len(tasks)
+                collected_deliverables = len(deliverables)
+                collection_percentage = (collected_deliverables / total_tasks) * 100 if total_tasks > 0 else 0
+                
+                self.logger.info(f"Deliverable collection progress: {collected_deliverables}/{total_tasks} ({collection_percentage:.1f}%)")
             
             # Store deliverable information in memory
             await self.memory_manager.store(
@@ -882,22 +909,47 @@ class TeamLeadAgent(BaseAgent):
                 content={"deliverables": deliverables}
             )
             
-            # Update status based on collection progress
-            if collection_percentage >= 80:
-                await self.update_status("compiling_results")
-                state["status"] = "compiling_results"
-            
             return state
             
         except Exception as e:
             self.logger.error(f"Error in collect_deliverables: {str(e)}", exc_info=True)
             raise
     
+    def _is_ready_for_compilation(self, state: TeamLeadGraphState) -> bool:
+        """
+        Determine if the project is ready for compilation based on collected deliverables.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            bool: True if ready for compilation
+        """
+        tasks = state.get("tasks", [])
+        deliverables = state.get("deliverables", {})
+        progress = state.get("progress", {})
+        
+        # Check if we have enough deliverables
+        if not tasks or not deliverables:
+            return False
+            
+        # Calculate completion ratio
+        total_tasks = len(tasks)
+        collected_deliverables = len(deliverables)
+        collection_ratio = collected_deliverables / total_tasks if total_tasks > 0 else 0
+        
+        # Check overall progress
+        completion_percentage = progress.get("completion_percentage", 0)
+        
+        # Ready if we have at least 80% of deliverables and 80% completion
+        return collection_ratio >= 0.8 and completion_percentage >= 80
+    
     @monitor_operation(operation_type="compile_results",
                       metadata={"phase": "result_compilation"})
     async def compile_results(self, state: TeamLeadGraphState) -> Dict[str, Any]:
         """
         Compile all deliverables into a final project result.
+        Delegates to Code Assembler if available.
         
         Args:
             state: Current workflow state
@@ -908,38 +960,47 @@ class TeamLeadAgent(BaseAgent):
         self.logger.info("Starting compile_results phase")
         
         try:
-            deliverables = state["deliverables"]
-            project_description = state["input"]
+            deliverables = state.get("deliverables", {})
+            project_description = state.get("input", "Software project")
             
-            # Define target component structure
-            component_structure = {
-                "directories": {
-                    "code": ["src", "api", "components"],
-                    "docs": ["specifications", "guides"],
-                    "config": []
-                }
-            }
-            
-            # Compile results using LLM
-            compilation_plan = await self.llm_service.compile_results(
-                project_description=project_description,
-                deliverables=deliverables,
-                component_structure=component_structure
-            )
-            
-            # Store compilation plan
-            state["compilation_result"] = compilation_plan
-            
-            # Execute compilation using result compiler
-            compilation_result = self.result_compiler.compile_project(self.project_name)
+            # Check if Code Assembler is available
+            if self.has_code_assembler and self.code_assembler_agent:
+                self.logger.info("Using Code Assembler Agent for advanced project compilation")
+                
+                # Invoke the Result Compiler with Code Assembler integration
+                compilation_result = await self.result_compiler.compile_project(
+                    project_name=self.project_name,
+                    project_description=project_description
+                )
+                
+                if compilation_result and compilation_result.get("success", False):
+                    self.logger.info("Code Assembler compilation completed successfully")
+                    # Store result
+                    state["compilation_result"] = compilation_result
+                    state["output_location"] = compilation_result.get("output_dir", "")
+                else:
+                    self.logger.warning("Code Assembler compilation failed, falling back to basic compilation")
+                    # Fall back to basic compilation
+                    basic_result = await self.invoke_basic_compilation()
+                    # Store result
+                    state["compilation_result"] = basic_result
+                    state["output_location"] = basic_result.get("output_dir", "")
+            else:
+                self.logger.info("Code Assembler not available, using basic compilation")
+                # Use basic compilation
+                basic_result = await self.invoke_basic_compilation()
+                # Store result
+                state["compilation_result"] = basic_result
+                state["output_location"] = basic_result.get("output_dir", "")
             
             # Store in long-term memory for future reference
             await self.memory_manager.store(
                 agent_id=self.agent_id,
                 memory_type=MemoryType.LONG_TERM,
                 content={
-                    "compilation_result": compilation_result,
-                    "project_name": self.project_name
+                    "compilation_result": state["compilation_result"],
+                    "project_name": self.project_name,
+                    "output_location": state["output_location"]
                 },
                 metadata={"type": "final_result"}
             )
@@ -953,7 +1014,59 @@ class TeamLeadAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Error in compile_results: {str(e)}", exc_info=True)
-            raise
+            
+            # Ensure we have a compilation result even in case of error
+            state["compilation_result"] = {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            # Try to proceed anyway
+            await self.update_status("completed")
+            state["status"] = "completed"
+            
+            return state
+    
+    async def invoke_basic_compilation(self) -> Dict[str, Any]:
+        """
+        Invoke basic compilation using the Result Compiler directly.
+        This is used when Code Assembler is unavailable or fails.
+        
+        Returns:
+            Dict[str, Any]: Compilation result
+        """
+        self.logger.info("Invoking basic compilation")
+        
+        try:
+            # Make sure result compiler is initialized
+            if not hasattr(self, 'result_compiler') or self.result_compiler is None:
+                self.result_compiler = ResultCompiler()
+                self.result_compiler.create_project(
+                    project_name=self.project_name,
+                    project_type=ProjectType.GENERIC
+                )
+            
+            # Use the result compiler's basic compilation
+            result = self.result_compiler.compile_project(self.project_name)
+            if result:
+                self.logger.info("Basic compilation completed successfully")
+                return result
+            else:
+                self.logger.warning("Basic compilation failed")
+                return {
+                    "success": False,
+                    "error": "Basic compilation failed",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error in basic compilation: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
     
     @monitor_operation(operation_type="complete_project",
                       metadata={"phase": "completion"})
@@ -984,7 +1097,7 @@ class TeamLeadAgent(BaseAgent):
                 },
                 "final_progress": state["progress"],
                 "compilation_result": state["compilation_result"],
-                "output_location": self.result_compiler.get_project_status(self.project_name).get("output_dir", "unknown")
+                "output_location": state.get("output_location", "unknown")
             }
             
             # Store final report in long-term memory
@@ -1074,3 +1187,64 @@ class TeamLeadAgent(BaseAgent):
                 "error": str(e),
                 "generated_at": datetime.utcnow().isoformat()
             }
+    
+    @trace_method
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the Team Lead Agent's workflow.
+        
+        Args:
+            input_data: Input containing project description and plan
+            
+        Returns:
+            Dict[str, Any]: Final results of the team lead process
+        """
+        self.logger.info("Starting TeamLead workflow execution")
+        try:
+            # Ensure input contains required fields
+            if "input" not in input_data:
+                raise ValueError("Input must contain 'input' field with project description")
+                
+            if "project_plan" not in input_data:
+                raise ValueError("Input must contain 'project_plan' field with project plan")
+            
+            self.logger.debug(f"Input data: {str(input_data)[:200]}...")
+            
+            # Initialize specialized agents
+            await self.initialize_agents()
+            
+            # Create initial state
+            initial_state = {
+                "input": input_data["input"],
+                "project_plan": input_data["project_plan"],
+                "tasks": [],
+                "execution_plan": {},
+                "agent_assignments": {},
+                "progress": {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "completion_percentage": 0,
+                    "milestone_progress": [],
+                    "task_summary": {
+                        "total": 0,
+                        "completed": 0,
+                        "in_progress": 0,
+                        "blocked": 0,
+                        "pending": 0
+                    }
+                },
+                "deliverables": {},
+                "compilation_result": {},
+                "status": "initialized"
+            }
+            
+            # Execute graph
+            self.logger.debug("Starting graph execution")
+            result = await self.graph.ainvoke(initial_state)
+            
+            self.logger.info("Workflow completed successfully")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Error during workflow execution: {str(e)}", exc_info=True)
+            raise

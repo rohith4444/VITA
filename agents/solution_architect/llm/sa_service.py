@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import json
 from openai import AsyncOpenAI
 from backend.config import Config
@@ -8,7 +8,11 @@ from agents.solution_architect.llm.sa_prompts import (
     format_tech_stack_prompt,
     format_architecture_design_prompt,
     format_architecture_validation_prompt,
-    format_specifications_prompt
+    format_specifications_prompt,
+    format_task_instruction_prompt,
+    format_feedback_processing_prompt,
+    format_deliverable_packaging_prompt,
+    format_status_report_prompt
 )
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_class
@@ -96,17 +100,31 @@ class LLMService:
         """
         self.logger.debug("Parsing LLM response")
         try:
-            parsed_response = json.loads(response)
+            # Extract JSON content from the response if needed
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                # Extract JSON part
+                json_content = response[json_start:json_end]
+                parsed_response = json.loads(json_content)
+            else:
+                # Try parsing the whole response
+                parsed_response = json.loads(response)
             
             if expected_keys:
                 missing_keys = [key for key in expected_keys if key not in parsed_response]
                 if missing_keys:
+                    self.logger.warning(f"Response missing expected keys: {missing_keys}")
                     raise ValueError(f"Response missing expected keys: {missing_keys}")
             
             self.logger.debug("Successfully parsed LLM response")
             return parsed_response
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse LLM response: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            self.logger.error(f"Error processing LLM response: {str(e)}", exc_info=True)
             raise
         
     async def _create_chat_completion(
@@ -155,13 +173,15 @@ class LLMService:
     )
     async def analyze_architecture_requirements(self, 
                                               project_description: str,
-                                              features: List[str]) -> Dict[str, Any]:
+                                              features: List[str],
+                                              task_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Analyze and structure architecture requirements using LLM.
         
         Args:
             project_description (str): The project description
             features (List[str]): List of project features
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
             
         Returns:
             Dict[str, Any]: Structured analysis of requirements
@@ -174,7 +194,8 @@ class LLMService:
         try:
             formatted_prompt = format_architecture_requirements_prompt(
                 project_description=project_description,
-                features=features
+                features=features,
+                task_context=task_context
             )
 
             response_content = await self._create_chat_completion(
@@ -211,13 +232,15 @@ class LLMService:
     )
     async def select_technology_stack(self,
                                     project_description: str,
-                                    requirements: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+                                    requirements: Dict[str, Any],
+                                    task_context: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
         Select appropriate technology stack using LLM.
         
         Args:
             project_description (str): The project description
             requirements (Dict[str, Any]): Structured requirements
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
             
         Returns:
             Dict[str, List[Dict[str, Any]]]: Selected technology stack
@@ -230,7 +253,8 @@ class LLMService:
         try:
             formatted_prompt = format_tech_stack_prompt(
                 project_description=project_description,
-                requirements=requirements
+                requirements=requirements,
+                task_context=task_context
             )
 
             response_content = await self._create_chat_completion(
@@ -268,7 +292,8 @@ class LLMService:
     async def generate_architecture_design(self,
                                          project_description: str,
                                          tech_stack: Dict[str, List[Dict[str, Any]]],
-                                         requirements: Dict[str, Any]) -> Dict[str, Any]:
+                                         requirements: Dict[str, Any],
+                                         task_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Generate system architecture design using LLM.
         
@@ -276,6 +301,7 @@ class LLMService:
             project_description (str): The project description
             tech_stack (Dict[str, List[Dict[str, Any]]]): Selected technology stack
             requirements (Dict[str, Any]): Structured requirements
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
             
         Returns:
             Dict[str, Any]: Architecture design
@@ -289,7 +315,8 @@ class LLMService:
             formatted_prompt = format_architecture_design_prompt(
                 project_description=project_description,
                 tech_stack=tech_stack,
-                requirements=requirements
+                requirements=requirements,
+                task_context=task_context
             )
 
             response_content = await self._create_chat_completion(
@@ -327,13 +354,15 @@ class LLMService:
     )
     async def validate_architecture_design(self,
                                          architecture_design: Dict[str, Any],
-                                         requirements: Dict[str, Any]) -> Dict[str, Any]:
+                                         requirements: Dict[str, Any],
+                                         task_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Validate architecture design using LLM.
         
         Args:
             architecture_design (Dict[str, Any]): Architecture design
             requirements (Dict[str, Any]): Structured requirements
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
             
         Returns:
             Dict[str, Any]: Validation results
@@ -346,7 +375,8 @@ class LLMService:
         try:
             formatted_prompt = format_architecture_validation_prompt(
                 architecture_design=architecture_design,
-                requirements=requirements
+                requirements=requirements,
+                task_context=task_context
             )
 
             response_content = await self._create_chat_completion(
@@ -384,7 +414,8 @@ class LLMService:
     async def generate_technical_specifications(self,
                                               architecture_design: Dict[str, Any],
                                               tech_stack: Dict[str, List[Dict[str, Any]]],
-                                              validation_results: Dict[str, Any]) -> Dict[str, Any]:
+                                              validation_results: Dict[str, Any],
+                                              task_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Generate technical specifications using LLM.
         
@@ -392,6 +423,7 @@ class LLMService:
             architecture_design (Dict[str, Any]): Architecture design
             tech_stack (Dict[str, List[Dict[str, Any]]]): Selected technology stack
             validation_results (Dict[str, Any]): Validation results
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
             
         Returns:
             Dict[str, Any]: Technical specifications
@@ -405,7 +437,8 @@ class LLMService:
             formatted_prompt = format_specifications_prompt(
                 architecture_design=architecture_design,
                 tech_stack=tech_stack,
-                validation_results=validation_results
+                validation_results=validation_results,
+                task_context=task_context
             )
 
             response_content = await self._create_chat_completion(
@@ -430,38 +463,253 @@ class LLMService:
             self.logger.error(f"Error in technical specifications generation: {str(e)}", exc_info=True)
             raise
 
+    # New methods for Team Lead coordination
 
-    async def _parse_llm_response(self, response: str, expected_keys: Optional[List[str]] = None) -> Dict[str, Any]:
+    @monitor_llm(
+        run_name="process_task_instruction",
+        metadata={
+            "operation_details": {
+                "prompt_template": "task_instruction",
+                "max_tokens": 1000,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def process_task_instruction(self, task_instruction: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Parse and validate the LLM response into a structured format.
+        Process task instructions from Team Lead using LLM.
         
         Args:
-            response: Raw response string from LLM
-            expected_keys: List of keys expected in the response
+            task_instruction (Dict[str, Any]): Task instruction from Team Lead
             
         Returns:
-            Dict[str, Any]: Parsed and validated response
+            Dict[str, Any]: Processed task information
             
         Raises:
-            json.JSONDecodeError: If response is not valid JSON
-            ValueError: If response is missing expected keys
+            Exception: If processing fails
         """
-        self.logger.debug("Parsing LLM response")
+        self.logger.info("Processing task instruction from Team Lead")
+        
         try:
-            parsed_response = json.loads(response)
+            formatted_prompt = format_task_instruction_prompt(task_instruction)
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled Solution Architect with expertise in interpreting task requirements."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=1000
+            )
+
+            # Parse response
+            processed_instruction = await self._parse_llm_response(
+                response_content,
+                expected_keys=['task_type', 'interpretation', 'expected_deliverables']
+            )
             
-            if expected_keys:
-                missing_keys = [key for key in expected_keys if key not in parsed_response]
-                if missing_keys:
-                    self.logger.error(f"Response missing expected keys: {missing_keys}")
-                    raise ValueError(f"Response missing expected keys: {missing_keys}")
+            self.logger.info(f"Task instruction processing completed successfully: {processed_instruction.get('task_type', 'unknown')}")
             
-            self.logger.debug("Successfully parsed LLM response")
-            return parsed_response
+            return processed_instruction
             
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse LLM response as JSON: {str(e)}", exc_info=True)
-            raise
         except Exception as e:
-            self.logger.error(f"Unexpected error parsing LLM response: {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing task instruction: {str(e)}", exc_info=True)
             raise
+
+    @monitor_llm(
+        run_name="process_feedback",
+        metadata={
+            "operation_details": {
+                "prompt_template": "feedback_processing",
+                "max_tokens": 1500,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def process_feedback(self, feedback: Dict[str, Any], original_deliverable: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process feedback from Team Lead using LLM.
+        
+        Args:
+            feedback (Dict[str, Any]): Feedback from Team Lead
+            original_deliverable (Dict[str, Any]): Original deliverable that received feedback
+            
+        Returns:
+            Dict[str, Any]: Processed feedback with revision plan
+            
+        Raises:
+            Exception: If processing fails
+        """
+        self.logger.info("Processing feedback from Team Lead")
+        
+        try:
+            formatted_prompt = format_feedback_processing_prompt(
+                feedback=feedback,
+                original_deliverable=original_deliverable
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled Solution Architect with expertise in interpreting feedback."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=1500
+            )
+
+            # Parse response
+            processed_feedback = await self._parse_llm_response(
+                response_content,
+                expected_keys=['revision_areas', 'revision_plan']
+            )
+            
+            self.logger.info("Feedback processing completed successfully")
+            
+            return processed_feedback
+            
+        except Exception as e:
+            self.logger.error(f"Error processing feedback: {str(e)}", exc_info=True)
+            raise
+
+    @monitor_llm(
+        run_name="package_deliverables",
+        metadata={
+            "operation_details": {
+                "prompt_template": "deliverable_packaging",
+                "max_tokens": 2000,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def package_deliverables(self,
+                                 architecture_design: Dict[str, Any],
+                                 tech_stack: Dict[str, List[Dict[str, Any]]],
+                                 specifications: Dict[str, Any],
+                                 task_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Package deliverables for Team Lead using LLM.
+        
+        Args:
+            architecture_design (Dict[str, Any]): Architecture design
+            tech_stack (Dict[str, List[Dict[str, Any]]]): Selected technology stack
+            specifications (Dict[str, Any]): Technical specifications
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
+            
+        Returns:
+            Dict[str, Any]: Packaged deliverables
+            
+        Raises:
+            Exception: If packaging fails
+        """
+        self.logger.info("Packaging deliverables for Team Lead")
+        
+        try:
+            formatted_prompt = format_deliverable_packaging_prompt(
+                architecture_design=architecture_design,
+                tech_stack=tech_stack,
+                specifications=specifications,
+                task_context=task_context
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled Solution Architect with expertise in creating clear deliverables."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=2000
+            )
+
+            # Parse response
+            packaged_deliverables = await self._parse_llm_response(
+                response_content,
+                expected_keys=['deliverables', 'project_structure_recommendation']
+            )
+            
+            self.logger.info(f"Deliverable packaging completed successfully with {len(packaged_deliverables.get('deliverables', []))} deliverables")           
+            return packaged_deliverables
+            
+        except Exception as e:
+            self.logger.error(f"Error packaging deliverables: {str(e)}", exc_info=True)
+            return packaged_deliverables
+            
+        except Exception as e:
+            self.logger.error(f"Error packaging deliverables: {str(e)}", exc_info=True)
+            # Return a basic structure in case of failure
+            return {
+                "deliverables": [],
+                "project_structure_recommendation": {
+                    "root_directories": [],
+                    "directory_organization": "Failed to generate structure recommendation"
+                },
+                "error": str(e)
+            }
+
+    @monitor_llm(
+        run_name="generate_status_report",
+        metadata={
+            "operation_details": {
+                "prompt_template": "status_report",
+                "max_tokens": 1500,
+                "temperature": 0.3,
+                "response_format": "structured_json"
+            }
+        }
+    )
+    async def generate_status_report(self,
+                                   current_state: Dict[str, Any],
+                                   progress: Dict[str, Any],
+                                   task_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Generate a status report for Team Lead using LLM.
+        
+        Args:
+            current_state (Dict[str, Any]): Current state of the Solution Architect
+            progress (Dict[str, Any]): Progress information
+            task_context (Optional[Dict[str, Any]]): Optional context from Team Lead task
+            
+        Returns:
+            Dict[str, Any]: Status report
+            
+        Raises:
+            Exception: If report generation fails
+        """
+        self.logger.info("Generating status report for Team Lead")
+        
+        try:
+            formatted_prompt = format_status_report_prompt(
+                current_state=current_state,
+                progress=progress,
+                task_context=task_context
+            )
+
+            response_content = await self._create_chat_completion(
+                messages=[
+                    {"role": "system", "content": "You are a skilled Solution Architect with expertise in reporting progress clearly."},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                max_tokens=1500
+            )
+
+            # Parse response
+            status_report = await self._parse_llm_response(
+                response_content,
+                expected_keys=['status_summary', 'achievements', 'pending_work']
+            )
+            
+            self.logger.info("Status report generation completed successfully")
+            
+            return status_report
+            
+        except Exception as e:
+            self.logger.error(f"Error generating status report: {str(e)}", exc_info=True)
+            # Return a basic report in case of failure
+            return {
+                "status_summary": "Error occurred during status report generation",
+                "current_stage": current_state.get("status", "unknown"),
+                "completion_percentage": progress.get("completion_percentage", 0),
+                "achievements": [],
+                "pending_work": [],
+                "issues": [{"description": f"Error generating status report: {str(e)}"}],
+                "error": str(e)
+            }

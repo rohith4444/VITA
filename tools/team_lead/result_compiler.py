@@ -13,6 +13,15 @@ from core.tracing.service import trace_method
 # Initialize logger
 logger = setup_logger("tools.team_lead.result_compiler")
 
+try:
+    from agents.code_assembler.ca_agent import CodeAssemblerAgent
+    from memory.memory_manager import MemoryManager
+    HAS_CODE_ASSEMBLER = True
+except ImportError:
+    logger.warning("CodeAssemblerAgent not available, falling back to basic compilation")
+    HAS_CODE_ASSEMBLER = False
+
+
 class ComponentType(Enum):
     """Enum representing types of components that can be compiled."""
     CODE = "code"                    # Source code files
@@ -1277,50 +1286,329 @@ class ResultCompiler:
         
         return [result.get_summary() for result in self.completed_compilations]
 
-# Example usage
-if __name__ == "__main__":
-    # Create compiler
-    compiler = ResultCompiler()
+
+class ResultCompiler:
+    """Main class for compiling and assembling results from multiple agents."""
     
-    # Create a project
-    project_name = compiler.create_project("My Web App", ProjectType.WEB_APP)
+    def __init__(self, memory_manager: Optional[MemoryManager] = None):
+        """
+        Initialize the result compiler.
+        
+        Args:
+            memory_manager: Optional memory manager for Code Assembler integration
+        """
+        self.assemblies = {}  # Dict[project_name, ProjectAssembly]
+        self.completed_compilations = []  # List of CompilationResult
+        self.memory_manager = memory_manager  # For Code Assembler integration
+        self.code_assembler_agent = None  # Will be initialized if needed
+        
+        logger.info("Initialized ResultCompiler")
     
-    # Add components
-    compiler.add_component(
-        project_name=project_name,
-        name="index.js",
-        component_type=ComponentType.CODE,
-        agent_id="full_stack_developer",
-        content="console.log('Hello, World!');",
-        file_path="src/index.js"
-    )
+    @trace_method
+    def create_project(
+        self, 
+        project_name: str, 
+        project_type: Union[ProjectType, str],
+        output_base_dir: str = "outputs"
+    ) -> str:
+        """
+        Create a new project assembly.
+        
+        Args:
+            project_name: Name of the project
+            project_type: Type of project
+            output_base_dir: Base directory for output
+            
+        Returns:
+            str: Project name
+        """
+        logger.info(f"Creating project {project_name} of type {project_type}")
+        
+        # Convert string to enum if needed
+        if isinstance(project_type, str):
+            try:
+                project_type = ProjectType(project_type)
+            except ValueError:
+                logger.error(f"Invalid project type: {project_type}")
+                project_type = ProjectType.GENERIC
+        
+        # Check if project already exists
+        if project_name in self.assemblies:
+            logger.warning(f"Project {project_name} already exists, creating new version")
+            project_name = f"{project_name}_v{len([p for p in self.assemblies if p.startswith(project_name)])}"
+        
+        # Create assembly
+        self.assemblies[project_name] = ProjectAssembly(
+            project_name=project_name,
+            project_type=project_type,
+            output_base_dir=output_base_dir
+        )
+        
+        logger.info(f"Created project {project_name}")
+        return project_name
     
-    compiler.add_component(
-        project_name=project_name,
-        name="README.md",
-        component_type=ComponentType.DOCUMENTATION,
-        agent_id="solution_architect",
-        content="# My Web App\n\nA simple web application.",
-        file_path="README.md"
-    )
+    @trace_method
+    def add_component(
+        self,
+        project_name: str,
+        name: str,
+        component_type: Union[ComponentType, str],
+        agent_id: str,
+        content: Any,
+        file_path: Optional[str] = None,
+        dependencies: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """
+        Add a component to a project.
+        
+        Args:
+            project_name: Name of the project
+            name: Name of the component
+            component_type: Type of component
+            agent_id: ID of the agent that created the component
+            content: Content of the component
+            file_path: Optional file path for the component
+            dependencies: Optional list of component IDs this component depends on
+            metadata: Optional additional metadata
+            
+        Returns:
+            Optional[str]: Component ID if added successfully, None otherwise
+        """
+        logger.info(f"Adding component {name} to project {project_name}")
+        
+        if project_name not in self.assemblies:
+            logger.error(f"Project {project_name} not found")
+            return None
+        
+        # Convert string to enum if needed
+        if isinstance(component_type, str):
+            try:
+                component_type = ComponentType(component_type)
+            except ValueError:
+                logger.error(f"Invalid component type: {component_type}")
+                return None
+        
+        # Add component to project
+        assembly = self.assemblies[project_name]
+        component_id = assembly.register_component(
+            name=name,
+            component_type=component_type,
+            agent_id=agent_id,
+            content=content,
+            file_path=file_path,
+            dependencies=dependencies,
+            metadata=metadata
+        )
+        
+        return component_id
     
-    compiler.add_component(
-        project_name=project_name,
-        name="package.json",
-        component_type=ComponentType.CONFIG,
-        agent_id="full_stack_developer",
-        content={
-            "name": "my-web-app",
-            "version": "1.0.0",
-            "description": "A simple web application"
-        },
-        file_path="package.json"
-    )
+    @trace_method
+    async def compile_project(self, project_name: str, project_description: str = "") -> Optional[Dict[str, Any]]:
+        """
+        Compile a project using Code Assembler Agent if available.
+        
+        Args:
+            project_name: Name of the project
+            project_description: Description of the project for Code Assembler
+            
+        Returns:
+            Optional[Dict[str, Any]]: Compilation result summary if successful, None otherwise
+        """
+        logger.info(f"Compiling project {project_name}")
+        
+        if project_name not in self.assemblies:
+            logger.error(f"Project {project_name} not found")
+            return None
+        
+        assembly = self.assemblies[project_name]
+        
+        try:
+            # Check if we should use Code Assembler Agent
+            if HAS_CODE_ASSEMBLER and self.memory_manager:
+                logger.info("Using Code Assembler Agent for advanced compilation")
+                result = await self.delegate_to_code_assembler(
+                    project_name=project_name,
+                    project_description=project_description,
+                    project_type=assembly.project_type.value
+                )
+                if result:
+                    logger.info(f"Code Assembler compilation successful: {result['success']}")
+                    return result
+                else:
+                    logger.warning("Code Assembler compilation failed, falling back to basic compilation")
+            
+            # If Code Assembler not available or failed, use basic compilation
+            logger.info("Using basic compilation")
+            
+            # Resolve conflicts
+            assembly.resolve_component_conflicts()
+            
+            # Generate project
+            result = assembly.generate_project()
+            
+            # Store compilation result
+            self.completed_compilations.append(result)
+            
+            # Return summary
+            summary = result.get_summary()
+            logger.info(f"Project {project_name} compiled successfully: {summary['success']}")
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error compiling project {project_name}: {str(e)}", exc_info=True)
+            return None
     
-    # Get project status
-    status = compiler.get_project_status(project_name)
-    print(f"Project status: {status}")
+    @trace_method
+    async def delegate_to_code_assembler(
+        self,
+        project_name: str,
+        project_description: str,
+        project_type: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Delegate compilation to Code Assembler Agent.
+        
+        Args:
+            project_name: Name of the project
+            project_description: Description of the project
+            project_type: Type of project
+            
+        Returns:
+            Optional[Dict[str, Any]]: Compilation result summary if successful, None otherwise
+        """
+        logger.info(f"Delegating compilation of {project_name} to Code Assembler Agent")
+        
+        try:
+            # Initialize Code Assembler Agent if not already done
+            if not self.code_assembler_agent and HAS_CODE_ASSEMBLER:
+                logger.info("Initializing Code Assembler Agent")
+                # Create a unique ID for the Code Assembler Agent
+                code_assembler_id = f"code_assembler_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                self.code_assembler_agent = CodeAssemblerAgent(
+                    agent_id=code_assembler_id,
+                    name="Code Assembler",
+                    memory_manager=self.memory_manager
+                )
+                logger.info(f"Code Assembler Agent initialized with ID: {code_assembler_id}")
+            
+            if not self.code_assembler_agent:
+                logger.error("Failed to initialize Code Assembler Agent")
+                return None
+            
+            # Get components from the current project assembly
+            assembly = self.assemblies[project_name]
+            components_dict = {}
+            
+            for comp_id, component in assembly.components.items():
+                components_dict[comp_id] = {
+                    "name": component.name,
+                    "content": component.content,
+                    "type": component.component_type.value,
+                    "file_path": component.file_path,
+                    "agent_id": component.agent_id,
+                    "metadata": component.metadata
+                }
+            
+            # Create input data for Code Assembler
+            input_data = {
+                "project_name": project_name,
+                "project_type": project_type,
+                "project_description": project_description,
+                "components": components_dict
+            }
+            
+            logger.info(f"Sending {len(components_dict)} components to Code Assembler Agent")
+            
+            # Invoke Code Assembler Agent
+            result = await self.code_assembler_agent.run(input_data)
+            
+            # Process and store results
+            assembly_result = await self.process_assembly_results(project_name, result)
+            
+            return assembly_result
+            
+        except Exception as e:
+            logger.error(f"Error delegating to Code Assembler: {str(e)}", exc_info=True)
+            return None
     
-    # Compile project
-    result = compiler.compile_project(project_name)
-    print(f"Compilation result: {result}")
+    @trace_method
+    async def process_assembly_results(
+        self,
+        project_name: str,
+        assembly_result: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Process results returned from the Code Assembler Agent.
+        
+        Args:
+            project_name: Name of the project
+            assembly_result: Results from Code Assembler Agent
+            
+        Returns:
+            Dict[str, Any]: Processed result summary
+        """
+        logger.info(f"Processing assembly results for project {project_name}")
+        
+        try:
+            if not assembly_result:
+                logger.warning("Empty assembly result received")
+                return None
+            
+            # Extract important information from the assembly result
+            compiled_project = assembly_result.get("compiled_project", {})
+            output_location = assembly_result.get("output_location", "")
+            
+            # Update the assembly with the output location
+            if project_name in self.assemblies and output_location:
+                self.assemblies[project_name].output_dir = output_location
+            
+            # Create a summary of the assembly results
+            summary = {
+                "project_name": project_name,
+                "success": True,
+                "output_dir": output_location,
+                "compilation_timestamp": datetime.utcnow().isoformat(),
+                "component_count": len(self.assemblies[project_name].components),
+                "assembled_by": "code_assembler_agent",
+                "validation_summary": assembly_result.get("validation_results", {}).get("validation_summary", {})
+            }
+            
+            # Store the result in completed compilations
+            if "validation_results" in assembly_result:
+                validation_messages = []
+                for level, messages in assembly_result["validation_results"].get("issues_by_category", {}).items():
+                    for message in messages:
+                        validation_level = ValidationLevel.ERROR if message.get("level") == "error" else \
+                                          ValidationLevel.WARNING if message.get("level") == "warning" else \
+                                          ValidationLevel.INFO
+                        validation_messages.append(
+                            ValidationMessage(
+                                level=validation_level,
+                                message=message.get("message", ""),
+                                metadata={"category": level}
+                            )
+                        )
+                
+                result = CompilationResult(
+                    project_name=project_name,
+                    project_type=self.assemblies[project_name].project_type,
+                    output_dir=output_location,
+                    components=list(self.assemblies[project_name].components.values()),
+                    validation_messages=validation_messages,
+                    metadata={"assembled_by": "code_assembler_agent"}
+                )
+                
+                self.completed_compilations.append(result)
+            
+            logger.info(f"Successfully processed assembly results for {project_name}")
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error processing assembly results: {str(e)}", exc_info=True)
+            return {
+                "project_name": project_name,
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
