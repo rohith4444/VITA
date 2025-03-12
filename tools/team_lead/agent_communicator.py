@@ -18,6 +18,10 @@ class MessageType(Enum):
     NOTIFICATION = "notification" # Informational update
     ERROR = "error"               # Error notification
     DELIVERABLE = "deliverable"   # Transferring a work product
+    USER_FEEDBACK = "user_feedback"  # Feedback from user via Scrum Master
+    APPROVAL_REQUEST = "approval_request"  # Request for user approval via Scrum Master
+    MILESTONE_PRESENTATION = "milestone_presentation"  # Milestone data for user presentation
+    USER_DECISION = "user_decision"  # Decision made by user via Scrum Master
 
 class MessagePriority(Enum):
     """Enum representing the priority levels for messages."""
@@ -25,6 +29,7 @@ class MessagePriority(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+    USER_INITIATED = "user_initiated"  # Special priority for user-initiated requests
 
 class DeliverableType(Enum):
     """Enum representing the types of deliverables that can be transferred."""
@@ -33,6 +38,27 @@ class DeliverableType(Enum):
     DESIGN = "design"             # Design specifications
     TEST = "test"                 # Test cases or test code
     ANALYSIS = "analysis"         # Analysis reports or results
+    USER_PRESENTATION = "user_presentation"  # Content prepared for user consumption
+
+class AgentType(Enum):
+    """Enum representing the types of agents in the system."""
+    TEAM_LEAD = "team_lead"
+    SOLUTION_ARCHITECT = "solution_architect"
+    FULL_STACK_DEVELOPER = "full_stack_developer"
+    QA_TEST = "qa_test"
+    SCRUM_MASTER = "scrum_master"  # Added Scrum Master agent type
+    PROJECT_MANAGER = "project_manager"
+    CODE_ASSEMBLER = "code_assembler"
+
+class UserFeedbackType(Enum):
+    """Enum representing types of user feedback."""
+    GENERAL = "general"           # General comments
+    SUGGESTION = "suggestion"     # Suggested changes or improvements
+    APPROVAL = "approval"         # User approval of deliverable
+    REJECTION = "rejection"       # User rejection of deliverable
+    QUESTION = "question"         # User question about deliverable
+    CLARIFICATION = "clarification"  # User asking for clarification
+    REQUIREMENT = "requirement"   # User adding/changing requirements
 
 class Message:
     """Class representing a communication message between agents."""
@@ -46,7 +72,9 @@ class Message:
         reference_id: Optional[str] = None,
         task_id: Optional[str] = None,
         priority: MessagePriority = MessagePriority.MEDIUM,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,  # Added user_id for user-related messages
+        user_context: Optional[Dict[str, Any]] = None  # Added user context
     ):
         self.id = str(uuid.uuid4())
         self.source_agent_id = source_agent_id
@@ -60,6 +88,8 @@ class Message:
         self.timestamp = datetime.utcnow().isoformat()
         self.status = "created"
         self.response_to = None
+        self.user_id = user_id  # Store user ID for user-related messages
+        self.user_context = user_context or {}  # Store user context data
         
         logger.debug(f"Created new message {self.id} from {source_agent_id} to {target_agent_id} of type {message_type.value}")
     
@@ -77,7 +107,9 @@ class Message:
             "metadata": self.metadata,
             "timestamp": self.timestamp,
             "status": self.status,
-            "response_to": self.response_to
+            "response_to": self.response_to,
+            "user_id": self.user_id,  # Include user ID in serialization
+            "user_context": self.user_context  # Include user context
         }
     
     @classmethod
@@ -91,7 +123,9 @@ class Message:
             reference_id=data.get("reference_id"),
             task_id=data.get("task_id"),
             priority=MessagePriority(data.get("priority", "medium")),
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
+            user_id=data.get("user_id"),  # Extract user ID
+            user_context=data.get("user_context", {})  # Extract user context
         )
         message.id = data.get("id", message.id)
         message.timestamp = data.get("timestamp", message.timestamp)
@@ -109,11 +143,166 @@ class Message:
             reference_id=self.reference_id,
             task_id=self.task_id,
             priority=self.priority,
-            metadata=metadata or {}
+            metadata=metadata or {},
+            user_id=self.user_id,  # Preserve user ID
+            user_context=self.user_context  # Preserve user context
         )
         response.response_to = self.id
         logger.debug(f"Created response message {response.id} to message {self.id}")
         return response
+
+class UserFeedback:
+    """Class representing feedback from a user."""
+    
+    def __init__(
+        self,
+        user_id: str,
+        content: Any,
+        feedback_type: UserFeedbackType,
+        target_id: Optional[str] = None,  # ID of target component/deliverable
+        project_id: Optional[str] = None,
+        task_id: Optional[str] = None,
+        requires_response: bool = False,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        self.id = str(uuid.uuid4())
+        self.user_id = user_id
+        self.content = content
+        self.feedback_type = feedback_type if isinstance(feedback_type, UserFeedbackType) else UserFeedbackType(feedback_type)
+        self.target_id = target_id
+        self.project_id = project_id
+        self.task_id = task_id
+        self.requires_response = requires_response
+        self.metadata = metadata or {}
+        self.timestamp = datetime.utcnow().isoformat()
+        self.status = "created"
+        
+        logger.debug(f"Created user feedback {self.id} of type {feedback_type.value} from user {user_id}")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert user feedback to dictionary for serialization."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "content": self.content,
+            "feedback_type": self.feedback_type.value,
+            "target_id": self.target_id,
+            "project_id": self.project_id,
+            "task_id": self.task_id,
+            "requires_response": self.requires_response,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp,
+            "status": self.status
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'UserFeedback':
+        """Create a user feedback instance from a dictionary."""
+        feedback = cls(
+            user_id=data["user_id"],
+            content=data["content"],
+            feedback_type=UserFeedbackType(data["feedback_type"]),
+            target_id=data.get("target_id"),
+            project_id=data.get("project_id"),
+            task_id=data.get("task_id"),
+            requires_response=data.get("requires_response", False),
+            metadata=data.get("metadata", {})
+        )
+        feedback.id = data.get("id", feedback.id)
+        feedback.timestamp = data.get("timestamp", feedback.timestamp)
+        feedback.status = data.get("status", feedback.status)
+        return feedback
+
+class ApprovalRequest:
+    """Class representing a request for user approval."""
+    
+    def __init__(
+        self,
+        title: str,
+        description: str,
+        requestor_agent_id: str,
+        content: Any,
+        project_id: Optional[str] = None,
+        task_id: Optional[str] = None,
+        deadline: Optional[str] = None,
+        options: Optional[List[Dict[str, Any]]] = None,  # Possible decisions
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        self.id = str(uuid.uuid4())
+        self.title = title
+        self.description = description
+        self.requestor_agent_id = requestor_agent_id
+        self.content = content
+        self.project_id = project_id
+        self.task_id = task_id
+        self.deadline = deadline
+        self.options = options or [
+            {"id": "approve", "label": "Approve", "description": "Approve as is"},
+            {"id": "reject", "label": "Reject", "description": "Reject and provide feedback"}
+        ]
+        self.metadata = metadata or {}
+        self.timestamp = datetime.utcnow().isoformat()
+        self.status = "pending"
+        self.decision = None
+        self.decision_timestamp = None
+        self.decision_feedback = None
+        
+        logger.debug(f"Created approval request {self.id} from {requestor_agent_id}")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert approval request to dictionary for serialization."""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "requestor_agent_id": self.requestor_agent_id,
+            "content": self.content,
+            "project_id": self.project_id,
+            "task_id": self.task_id,
+            "deadline": self.deadline,
+            "options": self.options,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp,
+            "status": self.status,
+            "decision": self.decision,
+            "decision_timestamp": self.decision_timestamp,
+            "decision_feedback": self.decision_feedback
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ApprovalRequest':
+        """Create an approval request instance from a dictionary."""
+        request = cls(
+            title=data["title"],
+            description=data["description"],
+            requestor_agent_id=data["requestor_agent_id"],
+            content=data["content"],
+            project_id=data.get("project_id"),
+            task_id=data.get("task_id"),
+            deadline=data.get("deadline"),
+            options=data.get("options"),
+            metadata=data.get("metadata", {})
+        )
+        request.id = data.get("id", request.id)
+        request.timestamp = data.get("timestamp", request.timestamp)
+        request.status = data.get("status", request.status)
+        request.decision = data.get("decision")
+        request.decision_timestamp = data.get("decision_timestamp")
+        request.decision_feedback = data.get("decision_feedback")
+        return request
+    
+    def record_decision(
+        self,
+        decision: str,
+        feedback: Optional[Any] = None
+    ) -> None:
+        """Record a decision on this approval request."""
+        self.decision = decision
+        self.decision_timestamp = datetime.utcnow().isoformat()
+        self.decision_feedback = feedback
+        self.status = "decided"
+        
+        logger.debug(f"Recorded decision '{decision}' for approval request {self.id}")
 
 class Deliverable:
     """Class representing a work product deliverable."""
@@ -125,7 +314,8 @@ class Deliverable:
         source_agent_id: str,
         task_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        version: str = "1.0"
+        version: str = "1.0",
+        for_user_presentation: bool = False  # Added flag for user presentation
     ):
         self.id = str(uuid.uuid4())
         self.content = content
@@ -135,6 +325,7 @@ class Deliverable:
         self.metadata = metadata or {}
         self.version = version
         self.timestamp = datetime.utcnow().isoformat()
+        self.for_user_presentation = for_user_presentation  # Flag for user-targeted content
         
         logger.info(f"Created deliverable {self.id} of type {deliverable_type.value} from agent {source_agent_id}")
     
@@ -148,7 +339,8 @@ class Deliverable:
             "task_id": self.task_id,
             "metadata": self.metadata,
             "version": self.version,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
+            "for_user_presentation": self.for_user_presentation
         }
     
     @classmethod
@@ -160,7 +352,8 @@ class Deliverable:
             source_agent_id=data["source_agent_id"],
             task_id=data.get("task_id"),
             metadata=data.get("metadata", {}),
-            version=data.get("version", "1.0")
+            version=data.get("version", "1.0"),
+            for_user_presentation=data.get("for_user_presentation", False)
         )
         deliverable.id = data.get("id", deliverable.id)
         deliverable.timestamp = data.get("timestamp", deliverable.timestamp)
@@ -185,7 +378,8 @@ class Deliverable:
             source_agent_id=self.source_agent_id,
             task_id=self.task_id,
             metadata={**self.metadata, "previous_version": self.version},
-            version=new_version
+            version=new_version,
+            for_user_presentation=self.for_user_presentation
         )
         
         logger.info(f"Updated deliverable {self.id} to version {new_version}")
@@ -221,9 +415,11 @@ class CommunicationChannel:
         if not self.message_queue:
             return None
         
-        # Sort by priority and timestamp
+        # Sort by priority and timestamp, with special handling for user-initiated messages
         self.message_queue.sort(
             key=lambda m: (
+                # Make user-initiated messages highest priority
+                -1 if m.priority == MessagePriority.USER_INITIATED else
                 {"critical": 0, "high": 1, "medium": 2, "low": 3}[m.priority.value],
                 m.timestamp
             )
@@ -266,6 +462,9 @@ class AgentCommunicator:
         self.deliverables = {}  # Dict[deliverable_id, Deliverable]
         self.agent_message_boxes = {}  # Dict[agent_id, List[Message]]
         self.message_status = {}  # Dict[message_id, Dict[status_info]]
+        self.user_feedback = {}  # Dict[feedback_id, UserFeedback]  # Added for user feedback
+        self.approval_requests = {}  # Dict[request_id, ApprovalRequest]  # Added for approval requests
+        self.user_preferences = {}  # Dict[user_id, Dict[preference_data]]  # Added for user preferences
         
         logger.info("Initialized AgentCommunicator")
     
@@ -296,7 +495,9 @@ class AgentCommunicator:
         reference_id: Optional[str] = None,
         task_id: Optional[str] = None,
         priority: Union[MessagePriority, str] = MessagePriority.MEDIUM,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,  # Added user_id parameter
+        user_context: Optional[Dict[str, Any]] = None  # Added user context
     ) -> Optional[str]:
         """
         Send a message from one agent to another.
@@ -310,6 +511,8 @@ class AgentCommunicator:
             task_id: Optional task ID
             priority: Message priority
             metadata: Optional additional metadata
+            user_id: ID of the user if message relates to user interaction
+            user_context: Additional user context information
             
         Returns:
             Optional[str]: Message ID if sent successfully, None otherwise
@@ -340,6 +543,10 @@ class AgentCommunicator:
                 logger.error(f"Invalid priority: {priority}")
                 return None
         
+        # Handle user-initiated messages (from Scrum Master)
+        if source_agent_id == "scrum_master" and user_id:
+            priority = MessagePriority.USER_INITIATED
+        
         # Create message
         message = Message(
             source_agent_id=source_agent_id,
@@ -349,7 +556,9 @@ class AgentCommunicator:
             reference_id=reference_id,
             task_id=task_id,
             priority=priority,
-            metadata=metadata or {}
+            metadata=metadata or {},
+            user_id=user_id,
+            user_context=user_context
         )
         
         # Handle broadcast message
@@ -404,7 +613,8 @@ class AgentCommunicator:
         self, 
         agent_id: str, 
         message_type: Optional[Union[MessageType, str]] = None,
-        max_messages: int = 10
+        max_messages: int = 10,
+        include_user_messages_only: bool = False  # Added flag for user-related messages
     ) -> List[Dict[str, Any]]:
         """
         Retrieve messages for an agent.
@@ -413,6 +623,7 @@ class AgentCommunicator:
             agent_id: ID of the agent retrieving messages
             message_type: Optional filter by message type
             max_messages: Maximum number of messages to retrieve
+            include_user_messages_only: Only include messages with user context
             
         Returns:
             List[Dict[str, Any]]: List of messages as dictionaries
@@ -434,14 +645,19 @@ class AgentCommunicator:
             
             messages = [
                 m.to_dict() for m in self.agent_message_boxes.get(agent_id, [])
-                if m.message_type == message_type
+                if m.message_type == message_type and (not include_user_messages_only or m.user_id is not None)
             ]
         else:
-            messages = [m.to_dict() for m in self.agent_message_boxes.get(agent_id, [])]
+            messages = [
+                m.to_dict() for m in self.agent_message_boxes.get(agent_id, [])
+                if not include_user_messages_only or m.user_id is not None
+            ]
         
-        # Sort by priority and timestamp
+        # Sort by priority and timestamp with special handling for user-initiated messages
         messages.sort(
             key=lambda m: (
+                # Make user-initiated messages highest priority
+                -1 if m["priority"] == MessagePriority.USER_INITIATED.value else
                 {"critical": 0, "high": 1, "medium": 2, "low": 3}[m["priority"]],
                 m["timestamp"]
             )
@@ -489,12 +705,13 @@ class AgentCommunicator:
         if message_id in self.message_status:
             self.message_status[message_id]["status"] = "acknowledged"
             self.message_status[message_id]["acknowledged_at"] = datetime.utcnow().isoformat()
+            self.message_status[message_id]["acknowledged_by"] = agent_id
         
         logger.info(f"Message {message_id} acknowledged by {agent_id}")
         return True
     
     @trace_method
-    def transfer_deliverable(
+    async def transfer_deliverable(
         self, 
         source_agent_id: str, 
         target_agent_id: str,
@@ -502,10 +719,13 @@ class AgentCommunicator:
         deliverable_type: Union[DeliverableType, str],
         task_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        message: Optional[str] = None
+        message: Optional[str] = None,
+        for_user_presentation: bool = False,  # New parameter
+        user_id: Optional[str] = None         # New parameter for user context
     ) -> Optional[str]:
         """
         Transfer a deliverable from one agent to another.
+        Enhanced to support user-targeted deliverables.
         
         Args:
             source_agent_id: ID of the sending agent
@@ -515,13 +735,15 @@ class AgentCommunicator:
             task_id: Optional task ID
             metadata: Optional additional metadata
             message: Optional accompanying message
+            for_user_presentation: Whether this is for user presentation
+            user_id: Optional user ID if this is related to a specific user
             
         Returns:
             Optional[str]: Deliverable ID if transferred successfully, None otherwise
         """
         logger.info(f"Transferring {deliverable_type} deliverable from {source_agent_id} to {target_agent_id}")
         
-        # Validate agents are registered
+        # Validate inputs
         if source_agent_id not in self.agents:
             logger.error(f"Cannot transfer deliverable: Source agent {source_agent_id} not registered")
             return None
@@ -544,28 +766,45 @@ class AgentCommunicator:
             deliverable_type=deliverable_type,
             source_agent_id=source_agent_id,
             task_id=task_id,
-            metadata=metadata or {}
+            metadata=metadata or {},
+            for_user_presentation=for_user_presentation
         )
         
         # Store deliverable
         self.deliverables[deliverable.id] = deliverable
         
+        # Determine message type and priority based on target and purpose
+        message_type = MessageType.DELIVERABLE
+        message_priority = MessagePriority.HIGH
+        
+        # If this is going to Scrum Master and is for user, adjust accordingly
+        if target_agent_id == "scrum_master" and for_user_presentation:
+            message_type = MessageType.MILESTONE_PRESENTATION
+            message_priority = MessagePriority.HIGH
+        
         # Create message to carry the deliverable
         message_content = {
             "deliverable_id": deliverable.id,
             "deliverable_type": deliverable.deliverable_type.value,
-            "message": message or f"Transferring {deliverable_type.value} deliverable"
+            "message": message or f"Transferring {deliverable_type.value} deliverable",
+            "for_user_presentation": for_user_presentation
         }
+        
+        # Add user context if provided
+        message_metadata = {"deliverable_id": deliverable.id}
+        if user_id:
+            message_metadata["user_id"] = user_id
         
         # Send the message
         message_id = self.send_message(
             source_agent_id=source_agent_id,
             target_agent_id=target_agent_id,
             content=message_content,
-            message_type=MessageType.DELIVERABLE,
+            message_type=message_type,
             task_id=task_id,
-            priority=MessagePriority.HIGH,
-            metadata={"deliverable_id": deliverable.id}
+            priority=message_priority,
+            metadata=message_metadata,
+            user_id=user_id
         )
         
         if not message_id:
@@ -577,485 +816,470 @@ class AgentCommunicator:
         
         logger.info(f"Successfully transferred deliverable {deliverable.id} with message {message_id}")
         return deliverable.id
-    
+
     @trace_method
-    def get_deliverable(self, deliverable_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Retrieve a deliverable by ID.
-        
-        Args:
-            deliverable_id: ID of the deliverable to retrieve
-            
-        Returns:
-            Optional[Dict[str, Any]]: Deliverable as a dictionary if found, None otherwise
-        """
-        logger.info(f"Retrieving deliverable {deliverable_id}")
-        
-        if deliverable_id not in self.deliverables:
-            logger.warning(f"Deliverable {deliverable_id} not found")
-            return None
-        
-        deliverable = self.deliverables[deliverable_id]
-        logger.info(f"Retrieved deliverable {deliverable_id} created by {deliverable.source_agent_id}")
-        return deliverable.to_dict()
-    
-    @trace_method
-    def update_deliverable(
-        self, 
-        deliverable_id: str, 
-        agent_id: str,
-        new_content: Any,
-        metadata_updates: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
-        """
-        Update an existing deliverable with new content.
-        
-        Args:
-            deliverable_id: ID of the deliverable to update
-            agent_id: ID of the agent making the update
-            new_content: New deliverable content
-            metadata_updates: Optional updates to metadata
-            
-        Returns:
-            Optional[str]: New deliverable ID if updated successfully, None otherwise
-        """
-        logger.info(f"Updating deliverable {deliverable_id} by agent {agent_id}")
-        
-        if agent_id not in self.agents:
-            logger.error(f"Cannot update deliverable: Agent {agent_id} not registered")
-            return None
-        
-        if deliverable_id not in self.deliverables:
-            logger.warning(f"Deliverable {deliverable_id} not found for update")
-            return None
-        
-        original = self.deliverables[deliverable_id]
-        
-        # Check if agent is allowed to update
-        if original.source_agent_id != agent_id:
-            logger.warning(f"Agent {agent_id} not authorized to update deliverable {deliverable_id}")
-            return None
-        
-        # Update metadata if provided
-        if metadata_updates:
-            updated_metadata = {**original.metadata, **metadata_updates}
-        else:
-            updated_metadata = original.metadata
-        
-        # Create updated deliverable
-        updated = original.update_version(new_content=new_content)
-        updated.metadata = updated_metadata
-        
-        # Store updated deliverable
-        self.deliverables[updated.id] = updated
-        
-        logger.info(f"Deliverable {deliverable_id} updated to {updated.id} by {agent_id}")
-        return updated.id
-    
-    @trace_method
-    def request_status_update(
-        self, 
-        source_agent_id: str, 
-        target_agent_id: str,
-        task_id: Optional[str] = None
-    ) -> Optional[str]:
-        """
-        Request a status update from another agent.
-        
-        Args:
-            source_agent_id: ID of the requesting agent
-            target_agent_id: ID of the agent to request from
-            task_id: Optional task ID to get status for
-            
-        Returns:
-            Optional[str]: Message ID if request sent successfully, None otherwise
-        """
-        logger.info(f"Requesting status update from {target_agent_id} by {source_agent_id}")
-        
-        content = {
-            "request_type": "status_update",
-            "task_id": task_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        message_id = self.send_message(
-            source_agent_id=source_agent_id,
-            target_agent_id=target_agent_id,
-            content=content,
-            message_type=MessageType.REQUEST,
-            task_id=task_id,
-            priority=MessagePriority.HIGH,
-            metadata={"request_type": "status_update"}
-        )
-        
-        if message_id:
-            logger.info(f"Status update request sent as message {message_id}")
-        else:
-            logger.error("Failed to send status update request")
-            
-        return message_id
-    
-    @trace_method
-    def broadcast_notification(
-        self, 
-        source_agent_id: str, 
+    def submit_user_feedback(
+        self,
+        user_id: str,
         content: Any,
-        priority: Union[MessagePriority, str] = MessagePriority.MEDIUM,
+        feedback_type: Union[UserFeedbackType, str],
+        target_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        task_id: Optional[str] = None,
+        requires_response: bool = False,
         metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """
-        Broadcast a notification to all agents.
+        Submit user feedback through the Scrum Master agent.
         
         Args:
-            source_agent_id: ID of the sending agent
-            content: Notification content
-            priority: Message priority
+            user_id: ID of the user submitting feedback
+            content: Feedback content
+            feedback_type: Type of feedback
+            target_id: Optional ID of target component/deliverable
+            project_id: Optional project ID
+            task_id: Optional task ID
+            requires_response: Whether a response is required
             metadata: Optional additional metadata
             
         Returns:
-            Optional[str]: Message ID if broadcast successfully, None otherwise
+            Optional[str]: Feedback ID if submitted successfully, None otherwise
         """
-        logger.info(f"Broadcasting notification from {source_agent_id}")
+        logger.info(f"Submitting {feedback_type} user feedback from user {user_id}")
         
-        return self.send_message(
-            source_agent_id=source_agent_id,
-            target_agent_id="broadcast",
-            content=content,
-            message_type=MessageType.NOTIFICATION,
-            priority=priority,
-            metadata=metadata
-        )
-    
-    @trace_method
-    def get_communication_history(
-        self, 
-        agent_id: str, 
-        other_agent_id: Optional[str] = None,
-        task_id: Optional[str] = None,
-        message_type: Optional[Union[MessageType, str]] = None,
-        start_time: Optional[str] = None,
-        end_time: Optional[str] = None,
-        limit: int = 50
-    ) -> List[Dict[str, Any]]:
-        """
-        Retrieve communication history for an agent.
-        
-        Args:
-            agent_id: ID of the agent
-            other_agent_id: Optional ID of the other agent in the communication
-            task_id: Optional task ID to filter by
-            message_type: Optional message type to filter by
-            start_time: Optional start time for filtering (ISO format)
-            end_time: Optional end time for filtering (ISO format)
-            limit: Maximum number of messages to retrieve
-            
-        Returns:
-            List[Dict[str, Any]]: List of messages as dictionaries
-        """
-        logger.info(f"Retrieving communication history for agent {agent_id}")
-        
-        if agent_id not in self.agents:
-            logger.error(f"Cannot retrieve history: Agent {agent_id} not registered")
-            return []
-        
-        # Collect all messages to or from this agent
-        all_messages = []
-        for messages in self.agent_message_boxes.values():
-            for message in messages:
-                if message.source_agent_id == agent_id or message.target_agent_id == agent_id:
-                    all_messages.append(message)
-        
-        # Apply filters
-        filtered_messages = []
-        for message in all_messages:
-            # Filter by other agent
-            if other_agent_id and message.source_agent_id != other_agent_id and message.target_agent_id != other_agent_id:
-                continue
-                
-            # Filter by task ID
-            if task_id and message.task_id != task_id:
-                continue
-                
-            # Filter by message type
-            if message_type:
-                if isinstance(message_type, str):
-                    if message.message_type.value != message_type:
-                        continue
-                elif message.message_type != message_type:
-                    continue
-            
-            # Filter by time range
-            if start_time:
-                if message.timestamp < start_time:
-                    continue
-                    
-            if end_time:
-                if message.timestamp > end_time:
-                    continue
-            
-            filtered_messages.append(message)
-        
-        # Sort by timestamp (newest first)
-        filtered_messages.sort(key=lambda m: m.timestamp, reverse=True)
-        
-        # Limit number of messages
-        filtered_messages = filtered_messages[:limit]
-        
-        # Convert to dictionaries
-        result = [message.to_dict() for message in filtered_messages]
-        
-        logger.info(f"Retrieved {len(result)} messages in communication history for agent {agent_id}")
-        return result
-    
-    @trace_method
-    def check_message_status(self, message_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Check the status of a message.
-        
-        Args:
-            message_id: ID of the message to check
-            
-        Returns:
-            Optional[Dict[str, Any]]: Status information if message found, None otherwise
-        """
-        logger.info(f"Checking status of message {message_id}")
-        
-        if message_id not in self.message_status:
-            logger.warning(f"Message {message_id} not found in status tracking")
+        # Ensure Scrum Master is registered
+        if "scrum_master" not in self.agents:
+            logger.error("Cannot submit feedback: Scrum Master agent not registered")
             return None
         
-        status_info = self.message_status[message_id]
-        logger.debug(f"Message {message_id} status: {status_info['status']}")
-        return status_info
-    
+        # Convert string type to enum if needed
+        if isinstance(feedback_type, str):
+            try:
+                feedback_type = UserFeedbackType(feedback_type)
+            except ValueError:
+                logger.error(f"Invalid feedback type: {feedback_type}")
+                return None
+        
+        # Create feedback object
+        feedback = UserFeedback(
+            user_id=user_id,
+            content=content,
+            feedback_type=feedback_type,
+            target_id=target_id,
+            project_id=project_id,
+            task_id=task_id,
+            requires_response=requires_response,
+            metadata=metadata
+        )
+        
+        # Store feedback
+        self.user_feedback[feedback.id] = feedback
+        
+        # Send message to Scrum Master
+        message_content = {
+            "feedback_id": feedback.id,
+            "feedback_type": feedback.feedback_type.value,
+            "content": content,
+            "target_id": target_id,
+            "requires_response": requires_response
+        }
+        
+        message_id = self.send_message(
+            source_agent_id="user", # Special case for user messages
+            target_agent_id="scrum_master",
+            content=message_content,
+            message_type=MessageType.USER_FEEDBACK,
+            task_id=task_id,
+            priority=MessagePriority.USER_INITIATED,
+            metadata={"project_id": project_id} if project_id else None,
+            user_id=user_id
+        )
+        
+        if not message_id:
+            logger.error(f"Failed to send message with feedback {feedback.id}")
+            # Remove feedback if message failed
+            if feedback.id in self.user_feedback:
+                del self.user_feedback[feedback.id]
+            return None
+        
+        logger.info(f"Successfully submitted user feedback {feedback.id} with message {message_id}")
+        return feedback.id
+
     @trace_method
-    def retry_failed_message(self, message_id: str) -> bool:
+    def submit_approval_request(
+        self,
+        title: str,
+        description: str,
+        requestor_agent_id: str,
+        content: Any,
+        user_id: str,
+        project_id: Optional[str] = None,
+        task_id: Optional[str] = None,
+        deadline: Optional[str] = None,
+        options: Optional[List[Dict[str, Any]]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
         """
-        Retry sending a failed message.
+        Submit a request for user approval via the Scrum Master.
         
         Args:
-            message_id: ID of the failed message to retry
+            title: Title of the approval request
+            description: Detailed description
+            requestor_agent_id: ID of the requesting agent
+            content: Content to approve
+            user_id: ID of the user to request approval from
+            project_id: Optional project ID
+            task_id: Optional task ID
+            deadline: Optional deadline for approval
+            options: Optional custom approval options
+            metadata: Optional additional metadata
             
         Returns:
-            bool: True if message was retried, False otherwise
+            Optional[str]: Request ID if submitted successfully, None otherwise
         """
-        logger.info(f"Attempting to retry message {message_id}")
+        logger.info(f"Submitting approval request from {requestor_agent_id} to user {user_id}")
         
-        # Find the message
-        message = None
-        for agent_id, messages in self.agent_message_boxes.items():
-            for m in messages:
-                if m.id == message_id:
-                    message = m
-                    break
-            if message:
-                break
+        # Ensure Scrum Master is registered
+        if "scrum_master" not in self.agents:
+            logger.error("Cannot submit approval request: Scrum Master agent not registered")
+            return None
         
-        if not message:
-            logger.warning(f"Message {message_id} not found for retry")
+        # Ensure requestor is registered
+        if requestor_agent_id not in self.agents:
+            logger.error(f"Cannot submit approval request: Requestor agent {requestor_agent_id} not registered")
+            return None
+        
+        # Create approval request
+        approval_request = ApprovalRequest(
+            title=title,
+            description=description,
+            requestor_agent_id=requestor_agent_id,
+            content=content,
+            project_id=project_id,
+            task_id=task_id,
+            deadline=deadline,
+            options=options,
+            metadata=metadata
+        )
+        
+        # Store approval request
+        self.approval_requests[approval_request.id] = approval_request
+        
+        # Send message to Scrum Master
+        message_content = {
+            "approval_request_id": approval_request.id,
+            "title": title,
+            "description": description,
+            "content": content,
+            "deadline": deadline,
+            "options": options
+        }
+        
+        message_id = self.send_message(
+            source_agent_id=requestor_agent_id,
+            target_agent_id="scrum_master",
+            content=message_content,
+            message_type=MessageType.APPROVAL_REQUEST,
+            task_id=task_id,
+            priority=MessagePriority.HIGH,
+            metadata={"project_id": project_id} if project_id else None,
+            user_id=user_id
+        )
+        
+        if not message_id:
+            logger.error(f"Failed to send message with approval request {approval_request.id}")
+            # Remove approval request if message failed
+            if approval_request.id in self.approval_requests:
+                del self.approval_requests[approval_request.id]
+            return None
+        
+        logger.info(f"Successfully submitted approval request {approval_request.id} with message {message_id}")
+        return approval_request.id
+
+    @trace_method
+    def record_user_decision(
+        self,
+        user_id: str,
+        approval_request_id: str,
+        decision: str,
+        feedback: Optional[Any] = None
+    ) -> bool:
+        """
+        Record a user's decision on an approval request.
+        
+        Args:
+            user_id: ID of the user making the decision
+            approval_request_id: ID of the approval request
+            decision: Decision string (e.g., "approve", "reject")
+            feedback: Optional feedback with the decision
+            
+        Returns:
+            bool: Success status
+        """
+        logger.info(f"Recording user decision from user {user_id} for request {approval_request_id}")
+        
+        # Check if approval request exists
+        if approval_request_id not in self.approval_requests:
+            logger.error(f"Cannot record decision: Approval request {approval_request_id} not found")
             return False
         
-        # Check if the message failed
-        if message.status != "failed":
-            logger.warning(f"Cannot retry message {message_id} with status {message.status}")
+        # Get approval request
+        approval_request = self.approval_requests[approval_request_id]
+        
+        # Record decision
+        approval_request.record_decision(decision, feedback)
+        
+        # Notify requestor
+        message_content = {
+            "approval_request_id": approval_request_id,
+            "decision": decision,
+            "feedback": feedback,
+            "decision_timestamp": approval_request.decision_timestamp
+        }
+        
+        message_id = self.send_message(
+            source_agent_id="scrum_master",
+            target_agent_id=approval_request.requestor_agent_id,
+            content=message_content,
+            message_type=MessageType.USER_DECISION,
+            task_id=approval_request.task_id,
+            priority=MessagePriority.HIGH,
+            metadata={"project_id": approval_request.project_id} if approval_request.project_id else None,
+            user_id=user_id
+        )
+        
+        if not message_id:
+            logger.error(f"Failed to send notification about decision on request {approval_request_id}")
             return False
         
-        # Reset message status
-        message.status = "retry"
-        
-        # Attempt delivery again
-        self._deliver_message(message)
-        
-        logger.info(f"Message {message_id} retry attempted")
+        logger.info(f"Successfully recorded user decision for request {approval_request_id}")
         return True
-    
+
     @trace_method
-    def clear_agent_messages(self, agent_id: str) -> int:
+    def get_user_feedback(
+        self,
+        feedback_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        feedback_type: Optional[Union[UserFeedbackType, str]] = None,
+        project_id: Optional[str] = None,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
         """
-        Clear all messages for an agent.
+        Retrieve user feedback.
         
         Args:
-            agent_id: ID of the agent to clear messages for
+            feedback_id: Optional specific feedback ID
+            user_id: Optional filter by user ID
+            feedback_type: Optional filter by feedback type
+            project_id: Optional filter by project ID
+            limit: Maximum number of feedback items to return
             
         Returns:
-            int: Number of messages cleared
+            List[Dict[str, Any]]: List of matching feedback items
         """
-        logger.info(f"Clearing messages for agent {agent_id}")
+        logger.info("Retrieving user feedback")
         
-        if agent_id not in self.agents:
-            logger.error(f"Cannot clear messages: Agent {agent_id} not registered")
-            return 0
+        # Convert string type to enum if needed
+        if isinstance(feedback_type, str):
+            try:
+                feedback_type = UserFeedbackType(feedback_type)
+            except ValueError:
+                logger.warning(f"Invalid feedback type: {feedback_type}")
+                feedback_type = None
         
-        if agent_id not in self.agent_message_boxes:
-            logger.warning(f"No message box found for agent {agent_id}")
-            return 0
-        
-        message_count = len(self.agent_message_boxes[agent_id])
-        self.agent_message_boxes[agent_id] = []
-        
-        logger.info(f"Cleared {message_count} messages for agent {agent_id}")
-        return message_count
-    
-    @trace_method
-    def get_pending_deliverables(self, agent_id: str) -> List[Dict[str, Any]]:
-        """
-        Get all pending deliverables for an agent.
-        
-        Args:
-            agent_id: ID of the agent
-            
-        Returns:
-            List[Dict[str, Any]]: List of pending deliverables
-        """
-        logger.info(f"Retrieving pending deliverables for agent {agent_id}")
-        
-        if agent_id not in self.agents:
-            logger.error(f"Cannot retrieve deliverables: Agent {agent_id} not registered")
+        # Get specific feedback if ID provided
+        if feedback_id:
+            if feedback_id in self.user_feedback:
+                return [self.user_feedback[feedback_id].to_dict()]
             return []
         
-        # Find all deliverable messages for this agent
-        pending_deliverables = []
+        # Filter feedback based on criteria
+        filtered_feedback = []
+        for fb in self.user_feedback.values():
+            # Apply filters
+            if user_id and fb.user_id != user_id:
+                continue
+            if feedback_type and fb.feedback_type != feedback_type:
+                continue
+            if project_id and fb.project_id != project_id:
+                continue
+            
+            filtered_feedback.append(fb.to_dict())
         
-        for message in self.agent_message_boxes.get(agent_id, []):
-            if message.message_type == MessageType.DELIVERABLE and message.status != "acknowledged":
-                # Get the deliverable ID from the message
-                deliverable_id = None
-                
-                if isinstance(message.content, dict) and "deliverable_id" in message.content:
-                    deliverable_id = message.content["deliverable_id"]
-                elif message.metadata and "deliverable_id" in message.metadata:
-                    deliverable_id = message.metadata["deliverable_id"]
-                
-                if deliverable_id and deliverable_id in self.deliverables:
-                    pending_deliverables.append({
-                        "message_id": message.id,
-                        "deliverable": self.deliverables[deliverable_id].to_dict(),
-                        "timestamp": message.timestamp,
-                        "source_agent_id": message.source_agent_id
-                    })
+        # Sort by timestamp (newest first) and limit
+        filtered_feedback.sort(key=lambda f: f.get("timestamp", ""), reverse=True)
+        filtered_feedback = filtered_feedback[:limit]
         
-        logger.info(f"Found {len(pending_deliverables)} pending deliverables for agent {agent_id}")
-        return pending_deliverables
-    
+        logger.info(f"Retrieved {len(filtered_feedback)} feedback items")
+        return filtered_feedback
+
     @trace_method
-    def get_communication_stats(self, agent_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_approval_requests(
+        self,
+        request_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        requestor_agent_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
         """
-        Get communication statistics.
+        Retrieve approval requests.
+        
+        Args:
+            request_id: Optional specific request ID
+            user_id: Optional filter by user ID
+            requestor_agent_id: Optional filter by requestor agent ID
+            project_id: Optional filter by project ID
+            status: Optional filter by status
+            limit: Maximum number of requests to return
+            
+        Returns:
+            List[Dict[str, Any]]: List of matching approval requests
+        """
+        logger.info("Retrieving approval requests")
+        
+        # Get specific request if ID provided
+        if request_id:
+            if request_id in self.approval_requests:
+                return [self.approval_requests[request_id].to_dict()]
+            return []
+        
+        # Filter requests based on criteria
+        filtered_requests = []
+        for req in self.approval_requests.values():
+            # Apply filters
+            if requestor_agent_id and req.requestor_agent_id != requestor_agent_id:
+                continue
+            if project_id and req.project_id != project_id:
+                continue
+            if status and req.status != status:
+                continue
+            # User ID is stored in metadata, check if it matches
+            if user_id and req.metadata.get("user_id") != user_id:
+                continue
+            
+            filtered_requests.append(req.to_dict())
+        
+        # Sort by timestamp (newest first) and limit
+        filtered_requests.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+        filtered_requests = filtered_requests[:limit]
+        
+        logger.info(f"Retrieved {len(filtered_requests)} approval requests")
+        return filtered_requests
+
+    @trace_method
+    def store_user_preference(
+        self,
+        user_id: str,
+        preference_type: str,
+        preference_value: Any,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Store a user preference.
+        
+        Args:
+            user_id: ID of the user
+            preference_type: Type of preference
+            preference_value: Value of the preference
+            metadata: Optional additional metadata
+            
+        Returns:
+            bool: Success status
+        """
+        logger.info(f"Storing {preference_type} preference for user {user_id}")
+        
+        # Initialize user preferences if needed
+        if user_id not in self.user_preferences:
+            self.user_preferences[user_id] = {}
+        
+        # Store preference
+        self.user_preferences[user_id][preference_type] = {
+            "value": preference_value,
+            "timestamp": datetime.utcnow().isoformat(),
+            "metadata": metadata or {}
+        }
+        
+        logger.info(f"Successfully stored {preference_type} preference for user {user_id}")
+        return True
+
+    @trace_method
+    def get_user_preferences(
+        self,
+        user_id: str,
+        preference_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Retrieve user preferences.
+        
+        Args:
+            user_id: ID of the user
+            preference_type: Optional specific preference type
+            
+        Returns:
+            Dict[str, Any]: User preferences
+        """
+        logger.info(f"Retrieving preferences for user {user_id}")
+        
+        # Check if user exists
+        if user_id not in self.user_preferences:
+            logger.warning(f"No preferences found for user {user_id}")
+            return {}
+        
+        # Get specific preference if type provided
+        if preference_type:
+            if preference_type in self.user_preferences[user_id]:
+                return {preference_type: self.user_preferences[user_id][preference_type]}
+            return {}
+        
+        # Return all preferences
+        return self.user_preferences[user_id]
+
+    @trace_method
+    def get_communication_stats_with_user_data(
+        self,
+        agent_id: Optional[str] = None,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get communication statistics with user interaction data.
         
         Args:
             agent_id: Optional agent ID to get stats for
+            user_id: Optional user ID to filter by
             
         Returns:
             Dict[str, Any]: Communication statistics
         """
-        logger.info("Retrieving communication statistics")
+        logger.info("Retrieving communication statistics with user data")
         
-        stats = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "total_agents": len(self.agents),
-            "total_messages": sum(len(msgs) for msgs in self.agent_message_boxes.values()),
-            "total_deliverables": len(self.deliverables),
-            "message_types": {},
-            "deliverable_types": {},
-            "agent_activity": {}
-        }
+        # Get base stats
+        stats = self.get_communication_stats(agent_id)
         
-        # Count message types
-        for agent_messages in self.agent_message_boxes.values():
-            for message in agent_messages:
-                msg_type = message.message_type.value
-                stats["message_types"][msg_type] = stats["message_types"].get(msg_type, 0) + 1
-        
-        # Count deliverable types
-        for deliverable in self.deliverables.values():
-            del_type = deliverable.deliverable_type.value
-            stats["deliverable_types"][del_type] = stats["deliverable_types"].get(del_type, 0) + 1
-        
-        # Count agent activity
-        for agent in self.agents:
-            sent_count = 0
-            received_count = 0
+        # Add user-specific information
+        if user_id:
+            # Count user feedback
+            user_feedback_count = sum(1 for fb in self.user_feedback.values() 
+                                if fb.user_id == user_id)
             
-            for agent_messages in self.agent_message_boxes.values():
-                for message in agent_messages:
-                    if message.source_agent_id == agent:
-                        sent_count += 1
-                    if message.target_agent_id == agent:
-                        received_count += 1
+            # Count user approval requests
+            user_approval_count = sum(1 for req in self.approval_requests.values() 
+                                if req.metadata.get("user_id") == user_id)
             
-            stats["agent_activity"][agent] = {
-                "sent": sent_count,
-                "received": received_count,
-                "total": sent_count + received_count
+            # Add user stats
+            stats["user_interaction"] = {
+                "user_id": user_id,
+                "feedback_count": user_feedback_count,
+                "approval_request_count": user_approval_count,
+                "has_preferences": user_id in self.user_preferences
+            }
+        else:
+            # Add overall user stats
+            stats["user_interaction"] = {
+                "feedback_count": len(self.user_feedback),
+                "approval_request_count": len(self.approval_requests),
+                "unique_users": len(set(fb.user_id for fb in self.user_feedback.values()))
             }
         
-        # Filter for specific agent if requested
-        if agent_id:
-            if agent_id in self.agents:
-                filtered_stats = {
-                    "timestamp": stats["timestamp"],
-                    "agent_id": agent_id,
-                    "sent_messages": stats["agent_activity"].get(agent_id, {}).get("sent", 0),
-                    "received_messages": stats["agent_activity"].get(agent_id, {}).get("received", 0),
-                    "total_messages": stats["agent_activity"].get(agent_id, {}).get("total", 0),
-                    "message_types": {},
-                    "deliverables_created": sum(1 for d in self.deliverables.values() if d.source_agent_id == agent_id)
-                }
-                
-                # Count message types for this agent
-                for agent_messages in self.agent_message_boxes.values():
-                    for message in agent_messages:
-                        if message.source_agent_id == agent_id or message.target_agent_id == agent_id:
-                            msg_type = message.message_type.value
-                            filtered_stats["message_types"][msg_type] = filtered_stats["message_types"].get(msg_type, 0) + 1
-                
-                stats = filtered_stats
-                logger.info(f"Retrieved communication stats for agent {agent_id}")
-            else:
-                logger.warning(f"Agent {agent_id} not found for stats")
-        else:
-            logger.info("Retrieved overall communication stats")
-        
         return stats
-
-# Example usage
-if __name__ == "__main__":
-    # Create communicator
-    communicator = AgentCommunicator()
-    
-    # Register some agents
-    communicator.register_agent("solution_architect")
-    communicator.register_agent("full_stack_developer")
-    communicator.register_agent("qa_test")
-    communicator.register_agent("team_lead")
-    
-    # Send a message
-    message_id = communicator.send_message(
-        source_agent_id="team_lead",
-        target_agent_id="solution_architect",
-        content="Please design the system architecture",
-        message_type=MessageType.INSTRUCTION,
-        task_id="task_1"
-    )
-    
-    print(f"Sent message: {message_id}")
-    
-    # Get messages for an agent
-    messages = communicator.get_messages("solution_architect")
-    print(f"Retrieved {len(messages)} messages")
-    
-    # Transfer a deliverable
-    deliverable_id = communicator.transfer_deliverable(
-        source_agent_id="solution_architect",
-        target_agent_id="full_stack_developer",
-        content={"architecture": "Microservices", "components": ["api", "db", "auth"]},
-        deliverable_type=DeliverableType.DESIGN,
-        task_id="task_1"
-    )
-    
-    print(f"Transferred deliverable: {deliverable_id}")
-    
-    # Check communication stats
-    stats = communicator.get_communication_stats()
-    print(f"Total messages: {stats['total_messages']}")
-    print(f"Total deliverables: {stats['total_deliverables']}")

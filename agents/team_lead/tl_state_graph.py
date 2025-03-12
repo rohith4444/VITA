@@ -21,6 +21,9 @@ class TeamLeadGraphState(TypedDict):
         deliverables (Dict[str, Any]): Collected deliverables from agents
         compilation_result (Dict[str, Any]): Final compiled project result
         status (str): Current workflow status
+        user_feedback (Optional[Dict[str, Any]]): Feedback received from user via Scrum Master
+        milestone_delivery (Optional[Dict[str, Any]]): Milestone data prepared for user presentation
+        user_query (Optional[Dict[str, Any]]): User question that needs technical response
     """
     input: str
     project_plan: Dict[str, Any]
@@ -31,6 +34,9 @@ class TeamLeadGraphState(TypedDict):
     deliverables: Dict[str, Any]
     compilation_result: Dict[str, Any]
     status: str
+    user_feedback: Optional[Dict[str, Any]]
+    milestone_delivery: Optional[Dict[str, Any]]
+    user_query: Optional[Dict[str, Any]]
 
 def validate_state(state: Dict[str, Any]) -> bool:
     """
@@ -54,7 +60,12 @@ def validate_state(state: Dict[str, Any]) -> bool:
             "monitoring_progress": ["input", "project_plan", "tasks", "execution_plan", "agent_assignments", "progress", "status"],
             "collecting_deliverables": ["input", "project_plan", "tasks", "execution_plan", "agent_assignments", "progress", "deliverables", "status"],
             "compiling_results": ["input", "project_plan", "tasks", "execution_plan", "agent_assignments", "progress", "deliverables", "status"],
-            "completed": ["input", "project_plan", "tasks", "execution_plan", "agent_assignments", "progress", "deliverables", "compilation_result", "status"]
+            "completed": ["input", "project_plan", "tasks", "execution_plan", "agent_assignments", "progress", "deliverables", "compilation_result", "status"],
+            
+            # New states for Scrum Master interaction
+            "receive_user_feedback": ["input", "project_plan", "tasks", "user_feedback", "status"],
+            "prepare_milestone_delivery": ["input", "project_plan", "tasks", "execution_plan", "progress", "milestone_delivery", "status"],
+            "respond_to_user_query": ["input", "project_plan", "tasks", "user_query", "status"]
         }
         
         # Get current stage from status
@@ -93,6 +104,16 @@ def validate_state(state: Dict[str, Any]) -> bool:
             
         if not isinstance(state["status"], str):
             raise TypeError("'status' must be a string")
+            
+        # Validate new Scrum Master interaction states
+        if "user_feedback" in state and state["user_feedback"] is not None and not isinstance(state["user_feedback"], dict):
+            raise TypeError("'user_feedback' must be a dictionary")
+            
+        if "milestone_delivery" in state and state["milestone_delivery"] is not None and not isinstance(state["milestone_delivery"], dict):
+            raise TypeError("'milestone_delivery' must be a dictionary")
+            
+        if "user_query" in state and state["user_query"] is not None and not isinstance(state["user_query"], dict):
+            raise TypeError("'user_query' must be a dictionary")
             
         logger.info(f"State validation successful for stage: {current_stage}")
         return True
@@ -135,7 +156,12 @@ def create_initial_state(input_description: str, project_plan: Dict[str, Any]) -
             },
             "deliverables": {},
             "compilation_result": {},
-            "status": "initialized"
+            "status": "initialized",
+            
+            # Initialize new Scrum Master interaction fields
+            "user_feedback": None,
+            "milestone_delivery": None,
+            "user_query": None
         }
         
         # Validate initial state
@@ -165,7 +191,12 @@ def get_next_stage(current_stage: str) -> str:
         "assigning_agents": "monitoring_progress",
         "monitoring_progress": "collecting_deliverables",
         "collecting_deliverables": "compiling_results",
-        "compiling_results": "completed"
+        "compiling_results": "completed",
+        
+        # New state flows for Scrum Master interaction
+        "receive_user_feedback": "monitoring_progress",  # After processing feedback, return to monitoring
+        "prepare_milestone_delivery": "monitoring_progress",  # After preparing milestone, return to monitoring
+        "respond_to_user_query": "monitoring_progress"  # After responding to query, return to monitoring
     }
     
     return stage_flow.get(current_stage, "completed")
@@ -206,6 +237,25 @@ def can_transition(state: Dict[str, Any], target_stage: str) -> bool:
         # Allow returning to progress monitoring from deliverable collection
         if current_stage == "collecting_deliverables" and target_stage == "monitoring_progress":
             return True
+        
+        # Scrum Master interaction state transitions
+        # Can transition to receive user feedback from monitoring or collecting
+        if target_stage == "receive_user_feedback" and current_stage in [
+            "monitoring_progress", "collecting_deliverables"
+        ]:
+            return True
+            
+        # Can transition to prepare milestone delivery from monitoring or collecting
+        if target_stage == "prepare_milestone_delivery" and current_stage in [
+            "monitoring_progress", "collecting_deliverables"
+        ]:
+            return True
+            
+        # Can transition to respond to user query from any active state
+        if target_stage == "respond_to_user_query" and current_stage not in [
+            "initialized", "completed"
+        ]:
+            return True
             
         logger.info(f"Invalid transition from {current_stage} to {target_stage}")
         return False
@@ -241,6 +291,19 @@ def get_state_metadata(state: Dict[str, Any]) -> Dict[str, Any]:
             
         if "deliverables" in state:
             metadata["deliverable_count"] = len(state["deliverables"])
+            
+        # Add metadata for Scrum Master interactions
+        if "user_feedback" in state and state["user_feedback"]:
+            metadata["has_user_feedback"] = True
+            metadata["feedback_type"] = state["user_feedback"].get("type", "general")
+            
+        if "milestone_delivery" in state and state["milestone_delivery"]:
+            metadata["has_milestone_delivery"] = True
+            metadata["milestone_id"] = state["milestone_delivery"].get("id")
+            
+        if "user_query" in state and state["user_query"]:
+            metadata["has_user_query"] = True
+            metadata["query_type"] = state["user_query"].get("type", "general")
             
         return metadata
         
