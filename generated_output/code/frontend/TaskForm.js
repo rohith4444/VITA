@@ -1,16 +1,18 @@
 import React, { useState, useContext } from 'react';
-import { TaskContext } from '../context/TaskContext';
+import { TasksContext } from '../context/TasksContext';
 
-const TaskForm = () => {
-  const { addTask } = useContext(TaskContext);
+function TaskForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const { addTask } = useContext(TasksContext);
+
   const handleSubmit = e => {
     e.preventDefault();
     addTask(title, description);
     setTitle('');
     setDescription('');
   };
+
   return (
     <form onSubmit={handleSubmit}>
       <input type='text' value={title} onChange={e => setTitle(e.target.value)} placeholder='Title' required />
@@ -18,6 +20,6 @@ const TaskForm = () => {
       <button type='submit'>Add Task</button>
     </form>
   );
-};
+}
 
 export default TaskForm;

@@ -1,15 +1,16 @@
 import React, { useContext } from 'react';
-import { TaskContext } from '../context/TaskContext';
+import { TasksContext } from '../context/TasksContext';
 
-const TaskItem = ({ task }) => {
-  const { deleteTask } = useContext(TaskContext);
+function TaskItem({ task }) {
+  const { completeTask, deleteTask } = useContext(TasksContext);
   return (
     <div>
       <h2>{task.title}</h2>
       <p>{task.description}</p>
+      <button onClick={() => completeTask(task.id)}>Complete</button>
       <button onClick={() => deleteTask(task.id)}>Delete</button>
     </div>
   );
-};
+}
 
 export default TaskItem;

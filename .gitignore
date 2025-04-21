@@ -61,6 +61,3 @@ uploads/
 
 # Chat API specific
 chat_api/uploads/
-
-# Agent generated files
-generated_output/
