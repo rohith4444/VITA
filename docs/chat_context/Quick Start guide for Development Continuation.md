@@ -1,7 +1,5 @@
 # VITA Agent Development Quick Start Guide
 
-## Introduction
-
 This guide provides essential information for developing agents within the VITA AI Agent Development Platform. It covers common patterns and agent-specific implementations.
 
 ## System Architecture

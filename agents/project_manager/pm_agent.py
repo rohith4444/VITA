@@ -5,10 +5,10 @@ from langgraph.graph import StateGraph
 from core.logging.logger import setup_logger
 from agents.core.monitoring.decorators import monitor_operation
 from agents.core.base_agent import BaseAgent
-from agents.project_manager.llm.service import LLMService
+from agents.project_manager.llm.pm_service import LLMService
 from memory.memory_manager import MemoryManager
 from memory.base import MemoryType
-from .state_graph import ProjectManagerGraphState
+from .pm_state_graph import ProjectManagerGraphState
 from tools.project_manager.generate_task_breakdown import generate_task_breakdown
 from tools.project_manager.resource_allocator import allocate_resources
 from tools.project_manager.timeline_generator import estimate_time
@@ -134,32 +134,44 @@ class ProjectManagerAgent(BaseAgent):
             previous_analyses = await self.memory_manager.retrieve(
                 agent_id=self.agent_id,
                 memory_type=MemoryType.WORKING,
-                query={"project_description": project_description}
+                query={"project_description": project_description,
+                       "requirement_analysis": {"$exists": True}}  # Ensure this field exists
             )
             self.logger.debug(f"Found previous analyses: {previous_analyses}")
             
             if previous_analyses:
-                self.logger.info("Using previous analysis from working memory")
-                response = previous_analyses[0].content
-            else:
-                self.logger.info("Performing new requirements analysis")
-                response = await self.llm_service.analyze_requirements(project_description)
-                self.logger.debug(f"LLM analysis response: {response}")
+                valid_analyses = [
+                    analysis for analysis in previous_analyses 
+                    if isinstance(analysis.content, dict) and 
+                    "requirement_analysis" in analysis.content and
+                    isinstance(analysis.content["requirement_analysis"], dict) and
+                    "restructured_requirements" in analysis.content["requirement_analysis"] and
+                    "features" in analysis.content["requirement_analysis"]
+                ]
                 
-                # Store in working memory
-                working_memory_entry = {
-                    "project_description": project_description,
-                    "requirement_analysis": response,
-                    "analysis_timestamp": datetime.utcnow().isoformat()
-                }
-                self.logger.debug(f"Storing in working memory: {working_memory_entry}")
+                if valid_analyses:
+                    self.logger.info("Using previous valid analysis from working memory")
+                    response = valid_analyses[0].content["requirement_analysis"]
+                else:
+                    self.logger.warning("No valid previous analyses found")
+                    self.logger.info("Performing new requirements analysis")
+                    response = await self.llm_service.analyze_requirements(project_description)
+                    self.logger.debug(f"LLM analysis response: {response}")
+                    
+                    # Store in working memory
+                    working_memory_entry = {
+                        "project_description": project_description,
+                        "requirement_analysis": response,
+                        "analysis_timestamp": datetime.utcnow().isoformat()
+                    }
+                    self.logger.debug(f"Storing in working memory: {working_memory_entry}")
+                    
+                    await self.memory_manager.store(
+                        agent_id=self.agent_id,
+                        memory_type=MemoryType.WORKING,
+                        content=working_memory_entry
+                    )
                 
-                await self.memory_manager.store(
-                    agent_id=self.agent_id,
-                    memory_type=MemoryType.WORKING,
-                    content=working_memory_entry
-                )
-            
             # Store in long-term memory
             long_term_entry = {
                 "project_description": project_description,
@@ -177,6 +189,12 @@ class ProjectManagerAgent(BaseAgent):
                     "importance": 0.8
                 }
             )
+            # Add at the end of the analyze_requirements method, right before returning
+            self.logger.debug(f"Response structure: {type(response)}")
+            if isinstance(response, dict):
+                self.logger.debug(f"Response keys: {response.keys()}")
+                for key in response:
+                    self.logger.debug(f"Key: {key}, Value type: {type(response[key])}")
             
             result = {"requirements": response, "status": "generating_project_plan"}
             self.logger.debug(f"analyze_requirements returning: {result}")

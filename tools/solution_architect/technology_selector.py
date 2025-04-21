@@ -1,7 +1,7 @@
 from core.logging.logger import setup_logger
 from typing import Dict, List, Any
 from core.tracing.service import trace_method
-from agents.solution_architect.llm.service import LLMService
+from agents.solution_architect.llm.sa_service import LLMService
 
 # Initialize logger
 logger = setup_logger("tools.solution_architect.technology_selector")

@@ -17,8 +17,8 @@ import signal
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method, tracing_service
 from memory.memory_manager import MemoryManager
-from agents.solution_architect.agent import SolutionArchitectAgent
-from agents.solution_architect.state_graph import create_initial_state
+from agents.solution_architect.sa_agent import SolutionArchitectAgent
+from agents.solution_architect.sa_state_graph import create_initial_state
 from backend.config import config
 from agents.core.monitoring.service import monitoring_service
 

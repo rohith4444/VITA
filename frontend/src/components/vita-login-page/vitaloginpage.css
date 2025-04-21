@@ -124,6 +124,9 @@
     height: 100vh;
     border-radius: 10px;
 }
+.sidebar::-webkit-scrollbar {
+    display: none;
+}
 
 .sidebar.collapsed {
     flex: 0.5
@@ -155,6 +158,8 @@
     /* margin-left: 60px; */
     transition: margin-left 0.3s ease-in-out;
     border-left: 0.5px solid lightgray;
+    align-items: center;
+    justify-content: center;
 }
 
 /* .sidebar.expanded + .chatbox {
