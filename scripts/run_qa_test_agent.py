@@ -17,7 +17,7 @@ import signal
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method, tracing_service
 from memory.memory_manager import MemoryManager
-from agents.qa_test.agent import QATestAgent
+from agents.qa_test.qat_agent import QATestAgent
 from backend.config import config
 from agents.core.monitoring.service import monitoring_service
 

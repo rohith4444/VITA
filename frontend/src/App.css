@@ -2,16 +2,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 :root {
   --primary-blue: #3B82F6;
-  --secondary-blue: rgb(96, 96, 182);
+  --primary-green: #293D33;
 
-  --text-primary-light: black;
-  --text-primary-dark: white;
+  --text-primary-light: #131010;
+  --text-primary-dark: #FFF0DC;
 
-  --text-secondary-light: rgb(70, 70, 70);
-  --text-secondary-dark: rgb(160, 160, 160);
+  --text-secondary-light: #543A14;
+  --text-secondary-dark: #F0BB78;
 
-  --bg-primary-light: #F8FAFD;
-  --bg-primary-dark: black;
+  /* --bg-primary-light: rgb(252, 251, 248); */
+  --bg-primary-light: #F2F1EA;
+  --bg-primary-dark: #131010;
 
   --bg-secondary-light: rgb(212, 212, 212);
   --bg-secondary-dark: rgb(34, 34, 34);
@@ -19,11 +20,16 @@
   --bg-navbar-light: #F8FAFD;
   --bg-navbar-dark: rgb(29, 29, 58);
 
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --chat-recieved-bg: #D0DCD7;
+
+  /* chat background 8DA99A B0C4BA D0DCD7 E4EBE8 F2F6F4 */
+  /* --bg-white:  */
+
   --bg-gradient: #F8FAFD;
   --text-primary: #2d3748;
   --text-secondary: #4a5568;
   --accent-color: #4299e1;
-  --card-bg: rgba(255, 255, 255, 0.8);
   --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -44,7 +50,7 @@
 }
 
 body {
-  background: var(--bg-gradient);
+  background: var(--card-bg);
   color: var(--text-primary);
   transition: background-color 0.3s ease;
 }
@@ -74,7 +80,18 @@ body {
 .container {
   display: grid;
   grid-template-columns: 1fr;
+  background-color: white;
   /* grid-template-rows: 70px 1fr 100px; */
+}
+
+h2 {
+  color: var(--primary-green);
+}
+
+.card {
+  background-color: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  flex-grow: 1;
 }
 
 .v1 {

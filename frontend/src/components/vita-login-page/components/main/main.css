@@ -1,6 +1,11 @@
 .main-container {
-    padding: 2rem 12rem;
+    /* padding: 8rem 12rem; */
     overflow: scroll;
+    width: 50%;
+}
+
+.main-container::-webkit-scrollbar {
+    display: none;
 }
 
 .main-container-content-wrapper {
@@ -34,7 +39,7 @@
 }
 
 .main-container-recent-chats-container {
-    margin-top: 3rem;
+    margin-top: 1.5rem;
 }
 
 .main-container-recent-chats-header {
@@ -63,13 +68,11 @@
 
 .main-container-recent-chats-card {
     padding: 1rem;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
     border-radius: 1rem;
     display: flex;
     flex-direction: column;
     align-items: left;
     justify-content: left;
-    width: 45%;
 }
 
 .main-container-recent-card-heading {

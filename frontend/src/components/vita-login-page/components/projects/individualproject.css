@@ -18,6 +18,7 @@
     flex-direction: row;
     align-items: center;
     gap: 0.5rem;
+    font-size: larger;
 }
 
 .individual-project-menu {
@@ -67,14 +68,12 @@
 
 .individual-project-recent-chats-card {
     padding: 1rem;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
     border-radius: 1rem;
     display: flex;
     flex-direction: column;
     /* flex: 1; */
     align-items: left;
     justify-content: left;
-    width: 45%;
 }
 
 .individual-project-recent-card-heading {

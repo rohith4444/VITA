@@ -5,10 +5,10 @@ import styled from 'styled-components';
 
 const ButtonV2 = styled.button`
     background-color: white;
-    color: black;
+    color: ${props => props.bgColor ? props.bgColor : "black"};
     font-size: 14px;
     font-weight: 600;
-    border: 1px solid black;
+    border: 1px solid ${props => props.bgColor ? props.bgColor : "black"};
     border-radius: 8px;
     cursor: pointer;
     width: ${props => props.width ? props.width : 'auto'};
@@ -16,17 +16,18 @@ const ButtonV2 = styled.button`
     padding: ${props => props.padding ? props.padding : '12px 20px'};
     transition: all 0.3s ease-in-out;
     &:hover {
-        background-color: black;
+        background-color: ${props => props.bgColor ? props.bgColor : "black"};
+        border: 1px solid ${props => props.bgColor ? props.bgColor : "black"};
         color: white;
     }
 `
 
 const ButtonV1 = styled.button`
-    background-color: black;
+    background-color: ${props => props.bgColor ? props.bgColor : 'black'};
     color: white;
     font-size: 14px;
     font-weight: 600;
-    border: 1px solid black;
+    border: 1px solid ${props => props.bgColor ? props.bgColor : 'black'};
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease-in-out;

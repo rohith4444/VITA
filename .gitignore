@@ -23,6 +23,8 @@ env/
 **/.env.development
 **/.env.production
 backend/.env
+backend/.env.development
+backend/.env.production
 chat_api/.env
 
 # Database files
@@ -59,6 +61,3 @@ uploads/
 
 # Chat API specific
 chat_api/uploads/
-
-# Agents generated files
-generated_output/

@@ -4,190 +4,177 @@ VITA is an innovative platform where users can bring their project ideas to life
 
 ## 🎯 Core Concept
 
-- Users submit project ideas or requirements
-- Platform analyzes requirements and recommends specialized AI agents
-- Users can customize their AI team based on project needs
-- AI team collaborates to plan and execute the project
-- Continuous interaction ensures alignment with user vision
-- Cloud-based delivery of all project artifacts
+VITA operates through a multi-agent system with specialized roles:
 
-## 💡 Key Features
+- **Project Manager**: Plans projects, breaks down tasks, and allocates resources
+- **Solution Architect**: Designs system architecture and selects technology stacks
+- **Full Stack Developer**: Implements code for frontend, backend, and database components
+- **QA/Test Engineer**: Develops test plans and creates test cases to ensure quality
+- **Code Assembler**: Organizes and integrates code components
+- **Scrum Master**: Manages project progress and facilitates team communication
+- **Team Lead**: Coordinates agent activities and compiles results
 
-### 1. Project Definition & Planning
-- Interactive requirement gathering
-- Automatic scope analysis
-- Cost and timeline estimation
-- Risk assessment
-- Resource requirement identification
+## 💻 Technical Architecture
 
-### 2. AI Team Assembly
-- Intelligent agent recommendation
-- Team composition optimization
-- Expertise matching
-- Role-based team structure
-- Custom team configuration
+### Agent System
 
-### 3. Project Execution
-- Stage-based development
-- Regular progress updates
-- Quality checkpoints
-- Client review phases
-- Iterative refinement
+The platform is built on a modular agent architecture:
 
-### 4. Team Collaboration
-- Real-time team chat
-- Progress tracking
-- File sharing
-- Version control
-- Feedback integration
+- Each agent has a defined role with specialized tools and LLM integration
+- A state-based workflow graph drives agent execution
+- Memory systems (short-term, working, and long-term) maintain context
+- Monitoring and tracing capabilities track agent operations
 
-### 5. Cloud Integration
-- Cloud-based artifact storage
-- Organized file structure
-- Documentation generation
-- Code management
-- Asset organization
+### Backend Components
 
-## 🚀 Project Types
+- **FastAPI Backend**: API endpoints, authentication, and database interactions
+- **PostgreSQL Database**: Persistent storage for project data
+- **Memory Manager**: Manages different memory types for agent context
+- **Monitoring**: LangSmith integration for LLM operation tracking
+- **Logging**: Comprehensive logging system with socket and file handlers
 
-### Software Development
-- Web applications
-- Mobile apps
-- APIs and backends
-- Desktop software
-- Database systems
+## 🧠 Agent Capabilities
 
-### Content Creation
-- Technical documentation
-- Marketing content
-- Academic papers
-- Research reports
-- Educational materials
+### Project Manager Agent
+- Analyzes project requirements
+- Generates task breakdowns and milestones
+- Allocates resources and estimates timelines
 
-### Design Projects
-- Website design
-- UI/UX design
-- Brand identity
-- Graphic design
-- Prototypes
+### Solution Architect Agent
+- Analyzes architecture requirements
+- Selects appropriate technology stacks
+- Designs system architecture
+- Validates architecture against requirements
+- Generates technical specifications
 
-### Academic Projects
-- Programming assignments
-- Research projects
-- Technical papers
-- Data analysis
-- Project documentation
+### Full Stack Developer Agent
+- Analyzes technical requirements
+- Designs component solutions (frontend, backend, database)
+- Generates production-ready code
+- Creates project documentation
 
-## 👥 Target Users
+### QA/Test Agent
+- Analyzes test requirements
+- Creates test plans
+- Generates test cases
+- Implements test code
 
-1. **Freelancers**
-   - Individual developers needing specialized support
-   - Content creators requiring technical assistance
-   - Designers seeking development help
+## 🔧 Tools
 
-2. **Students**
-   - Working on academic projects
-   - Developing portfolio pieces
-   - Learning through guided development
+The system includes specialized tools for each agent:
 
-3. **Small Businesses**
-   - Needing website development
-   - Requiring software solutions
-   - Seeking content creation
+- **Project Manager Tools**: Task breakdown, resource allocation, timeline estimation
+- **Solution Architect Tools**: Technology selection, architecture validation, specification generation
+- **Full Stack Developer Tools**: Requirements analysis, solution design, code generation, documentation
+- **QA/Test Tools**: Test analysis, test planning, test generation, test code implementation
 
-4. **Entrepreneurs**
-   - Building MVPs
-   - Developing proof of concepts
-   - Creating technical documentation
+## 🗄️ Memory Systems
 
-## 🛠 Technical Stack
+- **Short-Term Memory**: Temporary storage with automatic decay
+- **Working Memory**: Active processing state with quick access
+- **Long-Term Memory**: PostgreSQL-based persistent storage for important information
 
-- **Backend**: FastAPI, LangChain, PostgreSQL
-- **Frontend**: Next.js, React, TailwindCSS
-- **AI/ML**: LangChain for agent development
-- **Infrastructure**: AWS Cloud Services
-- **Storage**: PostgreSQL, Vector Stores (ChromaDB)
-- **Communication**: WebSocket for real-time features
+## 📊 Monitoring and Tracing
 
-## 🏗 Project Structure
+- Comprehensive metrics for LLM operations and agent activities
+- LangSmith integration for visualizing agent workflows
+- Detailed logging with customizable levels
+
+## 🏗️ Project Structure
+
+The repository follows a modular structure:
 
 ```
 project/
-├── frontend/                # Next.js frontend application
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── lib/           # Utilities and API
-│   │   └── app/          # Next.js pages
-│   └── public/            # Static assets
-├── backend/               # FastAPI backend
-│   ├── src/
-│   │   ├── agents/       # AI agent implementations
-│   │   ├── api/          # API routes
-│   │   ├── models/       # Data models
-│   │   └── utils/        # Utility functions
-│   └── tests/            # Test suites
-└── docs/                 # Documentation
+├── agents/                # Agent implementations
+│   ├── core/              # Base agent functionality
+│   ├── project_manager/   # Project planning agent
+│   ├── solution_architect/# Architecture design agent
+│   ├── full_stack_developer/ # Development agent
+│   ├── qa_test/           # Testing agent
+│   ├── code_assembler/    # Code integration agent
+│   ├── scrum_master/      # Project facilitation agent
+│   └── team_lead/         # Coordination agent
+├── backend/               # API server and configurations
+│   ├── chat_api/          # Chat interface API
+│   ├── models/            # Database models
+│   ├── routes/            # API routes
+│   ├── schemas/           # Data validation schemas
+│   └── services/          # Business logic services
+├── core/                  # Core system components
+│   ├── logging/           # Logging functionality
+│   └── tracing/           # Execution tracing
+├── memory/                # Memory systems
+│   ├── long_term/         # Persistent storage
+│   ├── short_term/        # Temporary memory
+│   └── working/           # Active context memory
+└── tools/                 # Specialized agent tools
+    ├── project_manager/   # Planning tools
+    ├── solution_architect/# Architecture tools
+    ├── full_stack_developer/ # Development tools
+    └── qa_test/           # Testing tools
 ```
 
 ## 🚀 Getting Started
 
-1. Clone the repository:
+### Prerequisites
+
+- Python 3.8+
+- PostgreSQL 12+
+- Node.js (for frontend components)
+
+### Installation
+
+1. Clone the repository
 ```bash
 git clone https://github.com/yourusername/vita.git
+cd vita
 ```
 
-2. Install frontend dependencies:
+2. Create a virtual environment
 ```bash
-cd frontend
-npm install
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
 ```
 
-3. Install backend dependencies:
+3. Install dependencies
 ```bash
-cd backend
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
-4. Set up environment variables:
+4. Configure environment variables
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+# Create .env file with required settings
+# See .env.example for required variables
 ```
 
-5. Start the development servers:
+5. Run the logging server
 ```bash
-# Frontend
-npm run dev
-
-# Backend
-python -m uvicorn src.main:app --reload
+python -m core.logging.log_server
 ```
 
-## 📚 Documentation
+### Running Agents
 
-- [API Documentation](docs/api.md)
-- [Agent System](docs/agents.md)
-- [Frontend Components](docs/frontend.md)
-- [Deployment Guide](docs/deployment.md)
+Use the scripts in the `scripts/` directory to run individual agents:
 
-## 🤝 Contributing
+```bash
+# Run project manager agent
+python -m scripts.run_project_manager
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+# Run solution architect agent
+python -m scripts.run_solution_architect_agent
+
+# Run full stack developer agent
+python -m scripts.run_software_dev_agent
+
+# Run QA/test agent
+python -m scripts.run_qa_test_agent
+```
 
 ## 📝 License
 
-This project is licensed under the [MIT License](LICENSE)
+This project is licensed under the MIT License.
 
 ## 📧 Contact
 
 For questions and support, please contact: rohithma05@gmail.com
-
-## running commands personal
-
-python -m src.utils.log_server for logging server
-
-.\.venv\Scripts\activate  for activating virtual environment

@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method
-from agents.full_stack_developer.llm.service import LLMService
+from agents.full_stack_developer.llm.fsd_service import LLMService
 
 # Initialize logger
 logger = setup_logger("tools.full_stack_developer.documentation_generator")

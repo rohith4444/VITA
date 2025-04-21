@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_method
-from agents.qa_test.llm.service import QATestLLMService
+from agents.qa_test.llm.qat_service import QATestLLMService
 
 # Initialize logger
 logger = setup_logger("tools.qa_test.test_planner")
