@@ -1753,3 +1753,131 @@ class TeamLeadAgent(BaseAgent):
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat()
             }
+        
+
+    # Add this method to your tl_agent.py file inside the TeamLeadAgent class
+    # It should be at the same level as other methods like run(), assign_agents(), etc.
+
+    @monitor_operation(operation_type="generate_report", 
+                    metadata={"phase": "reporting"})
+    async def generate_report(self, report_type: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Generate a report about the team's progress and activities.
+        
+        Args:
+            report_type: Type of report to generate
+            parameters: Optional parameters for the report
+            
+        Returns:
+            Dict[str, Any]: Generated report data
+        """
+        self.logger.info(f"Generating {report_type} report")
+        
+        try:
+            # Default parameters
+            params = parameters or {}
+            
+            if report_type == "progress":
+                # Generate progress report
+                progress = params.get("progress", self.state.get("progress", {}))
+                tasks = params.get("tasks", self.state.get("tasks", []))
+                execution_plan = params.get("execution_plan", self.state.get("execution_plan", {}))
+                
+                # Use progress tracker to generate report
+                progress_report = generate_progress_report(
+                    tasks=tasks,
+                    execution_plan=execution_plan,
+                    project_progress=progress
+                )
+                
+                return {
+                    "report_type": "progress",
+                    "report_data": progress_report,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+            elif report_type == "milestone":
+                # Generate milestone report
+                milestone_id = params.get("milestone_id")
+                if not milestone_id:
+                    raise ValueError("milestone_id is required for milestone reports")
+                    
+                milestone_tasks = [
+                    task for task in self.state.get("tasks", [])
+                    if task.get("milestone") == milestone_id
+                ]
+                
+                milestone_deliverables = {}
+                for task in milestone_tasks:
+                    task_id = task.get("id", "")
+                    if task_id in self.state.get("deliverables", {}):
+                        milestone_deliverables[task_id] = self.state["deliverables"][task_id]
+                
+                return {
+                    "report_type": "milestone",
+                    "milestone_id": milestone_id,
+                    "task_count": len(milestone_tasks),
+                    "deliverable_count": len(milestone_deliverables),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+            elif report_type == "agent_activity":
+                # Generate agent activity report
+                agent_id = params.get("agent_id")
+                if not agent_id:
+                    # Report on all agents
+                    agent_assignments = self.state.get("agent_assignments", {})
+                    
+                    activity_summary = {}
+                    for agent_id, tasks in agent_assignments.items():
+                        completed_tasks = sum(1 for task in tasks if self.active_tasks.get(task.get("task_id", ""), {}).get("status") == "completed")
+                        in_progress_tasks = sum(1 for task in tasks if self.active_tasks.get(task.get("task_id", ""), {}).get("status") == "in_progress")
+                        pending_tasks = sum(1 for task in tasks if self.active_tasks.get(task.get("task_id", ""), {}).get("status") == "pending")
+                        
+                        activity_summary[agent_id] = {
+                            "total_tasks": len(tasks),
+                            "completed_tasks": completed_tasks,
+                            "in_progress_tasks": in_progress_tasks,
+                            "pending_tasks": pending_tasks,
+                            "completion_percentage": (completed_tasks / len(tasks)) * 100 if len(tasks) > 0 else 0
+                        }
+                    
+                    return {
+                        "report_type": "agent_activity",
+                        "activity_summary": activity_summary,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                else:
+                    # Report on specific agent
+                    agent_tasks = self.state.get("agent_assignments", {}).get(agent_id, [])
+                    
+                    completed_tasks = sum(1 for task in agent_tasks if self.active_tasks.get(task.get("task_id", ""), {}).get("status") == "completed")
+                    in_progress_tasks = sum(1 for task in agent_tasks if self.active_tasks.get(task.get("task_id", ""), {}).get("status") == "in_progress")
+                    pending_tasks = sum(1 for task in agent_tasks if self.active_tasks.get(task.get("task_id", ""), {}).get("status") == "pending")
+                    
+                    return {
+                        "report_type": "agent_activity",
+                        "agent_id": agent_id,
+                        "total_tasks": len(agent_tasks),
+                        "completed_tasks": completed_tasks,
+                        "in_progress_tasks": in_progress_tasks,
+                        "pending_tasks": pending_tasks,
+                        "completion_percentage": (completed_tasks / len(agent_tasks)) * 100 if len(agent_tasks) > 0 else 0,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                    
+            else:
+                # Unknown report type
+                return {
+                    "report_type": "unknown",
+                    "error": f"Unknown report type: {report_type}",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error generating report: {str(e)}", exc_info=True)
+            return {
+                "report_type": report_type,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }

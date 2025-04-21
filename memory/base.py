@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Set, Union
 from enum import Enum, auto
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from core.logging.logger import setup_logger
 from core.tracing.service import trace_class
 
@@ -198,7 +198,7 @@ class MemoryEntry(BaseModel):
     class Config:
         arbitrary_types_allowed = True
     
-    @validator('agent_id')
+    @field_validator('agent_id')
     def validate_agent_id(cls, v: str) -> str:
         """Validate agent_id is not empty."""
         if not v or not v.strip():
@@ -206,7 +206,7 @@ class MemoryEntry(BaseModel):
             raise ValueError("agent_id cannot be empty")
         return v.strip()
     
-    @validator('content')
+    @field_validator('content')
     def validate_content(cls, v: Dict[str, Any]) -> Dict[str, Any]:
         """Validate content is not empty."""
         if not v:
@@ -214,9 +214,12 @@ class MemoryEntry(BaseModel):
             raise ValueError("content cannot be empty")
         return v
     
-    @root_validator
-    def validate_access_level(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    @model_validator(mode='after')
+    def validate_access_level(cls, model):
         """Validate access_level and accessible_by consistency."""
+        # For Pydantic v2 compatibility
+        values = {k: getattr(model, k, None) for k in model.model_fields.keys()}
+        
         access_level = values.get('access_level')
         accessible_by = values.get('accessible_by')
         
@@ -227,13 +230,16 @@ class MemoryEntry(BaseModel):
         if access_level != AccessLevel.SHARED and accessible_by:
             # Auto-correct by removing accessible_by for non-SHARED memory
             logger.warning(f"Removing accessible_by for non-SHARED memory (access_level: {access_level})")
-            values['accessible_by'] = None
+            setattr(model, 'accessible_by', None)
             
-        return values
+        return model
     
-    @root_validator
-    def validate_deliverable_type(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    @model_validator(mode='after')
+    def validate_deliverable_type(cls, model):
         """Validate deliverable_type if memory_type is DELIVERABLE."""
+        # For Pydantic v2 compatibility
+        values = {k: getattr(model, k, None) for k in model.model_fields.keys()}
+        
         memory_type = values.get('memory_type')
         deliverable_type = values.get('deliverable_type')
         
@@ -244,9 +250,9 @@ class MemoryEntry(BaseModel):
         if memory_type != MemoryType.DELIVERABLE and deliverable_type:
             # Auto-correct by removing deliverable_type for non-DELIVERABLE memory
             logger.warning(f"Removing deliverable_type for non-DELIVERABLE memory")
-            values['deliverable_type'] = None
+            setattr(model, 'deliverable_type', None)
             
-        return values
+        return model
 
     def can_access(self, agent_id: str) -> bool:
         """
